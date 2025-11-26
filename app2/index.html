@@ -1,12 +1,895 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App 2</title>
+    <title>Universal AI Chat Exporter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #e5e7eb;
+            --header-bg: #111827;
+            --paper-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --border-color: #e5e7eb;
+            --text-muted: #6b7280;
+            --success-color: #10b981;
+
+            /* Chat Bubble Colors */
+            --bubble-user-bg: #2563eb; /* Royal Blue */
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #f3f4f6;   /* Soft Gray */
+            --bubble-ai-text: #1f2937;
+        }
+
+        /* --- Dark Mode Palette --- */
+        body.dark-mode {
+            --bg-color: #1f2937;
+            --header-bg: #111827;
+            --border-color: #374151;
+            --text-muted: #9ca3af;
+
+            /* Invert bubble colors */
+            --bubble-user-bg: #374151;
+            --bubble-user-text: #f9fafb;
+            --bubble-ai-bg: #4b5563;
+            --bubble-ai-text: #f9fafb;
+        }
+
+        body.dark-mode .preview-pane { background-color: #111827; }
+        body.dark-mode #document-sheet { background-color: #1f2937; box-shadow: none; }
+        body.dark-mode .doc-header { border-bottom-color: var(--border-color); }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s;
+        }
+
+        /* --- App Header --- */
+        header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #374151;
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: #4b5563;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover { background-color: #6b7280; }
+        .btn-print { background-color: var(--primary-color); }
+        .btn-print:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success-color); }
+        .btn-success:hover { background-color: #059669; }
+
+        .status {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status.saved { color: var(--success-color); }
+
+        /* --- Main Layout --- */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- Input Side --- */
+        .editor-pane {
+            width: 35%;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            background: white;
+            z-index: 5;
+        }
+
+        .pane-header {
+            padding: 10px 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 20px;
+            resize: none;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+            color: #374151;
+            background: #fff;
+        }
+        textarea:focus { background: #fafafa; }
+
+        /* --- Preview Side --- */
+        .preview-pane {
+            width: 65%;
+            background-color: white;
+            overflow-y: auto;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #document-sheet {
+            background-color: white;
+            width: 100%; 
+            max-width: 210mm; /* A4 Width */
+            padding: 20mm;
+            box-shadow: none;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Document Header --- */
+        .doc-header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        input.editable {
+            border: none;
+            outline: none;
+            width: 100%;
+            background: transparent;
+            transition: background 0.2s;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        input.editable:hover { background: #f3f4f6; }
+        input.editable:focus { background: #eff6ff; }
+
+        .doc-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+
+        body.dark-mode .doc-title,
+        body.dark-mode .meta-row {
+            color: #d1d5db;
+        }
+
+        .meta-row {
+            display: flex;
+            gap: 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* --- Chat Bubble Styling --- */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .chat-row {
+            display: flex;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .chat-row.user {
+            justify-content: flex-end;
+        }
+
+        .chat-row.ai {
+            justify-content: flex-start;
+        }
+
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* User Bubble Style */
+        .chat-row.user .chat-bubble {
+            background-color: var(--bubble-user-bg);
+            color: var(--bubble-user-text);
+            border-bottom-right-radius: 4px; /* Subtle tail effect */
+        }
+        
+        /* Fix link colors in user bubbles (blue bg needs white text) */
+        .chat-row.user .chat-bubble a { color: #bfdbfe; }
+        .chat-row.user .chat-bubble code { background: rgba(255,255,255,0.2); color: white; }
+        .chat-row.user .chat-bubble pre { background: rgba(0,0,0,0.2); }
+
+        /* AI Bubble Style */
+        .chat-row.ai .chat-bubble {
+            background-color: var(--bubble-ai-bg);
+            color: var(--bubble-ai-text);
+            border-bottom-left-radius: 4px; /* Subtle tail effect */
+            border: 1px solid #e5e7eb;
+        }
+
+        .speaker-label {
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+            opacity: 0.7;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Standard Markdown Override for Bubbles */
+        .markdown-body {
+            background: transparent !important;
+            font-family: inherit !important;
+            font-size: inherit !important;
+        }
+        .chat-bubble .markdown-body p { margin-bottom: 0.5em; }
+        .chat-bubble .markdown-body p:last-child { margin-bottom: 0; }
+
+        /* Fallback for non-chat text */
+        .standard-doc {
+            font-size: 11pt;
+            line-height: 1.6;
+        }
+
+        /* --- Toast & Utils --- */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #111827;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.show { display: flex; }
+        @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* --- Responsive --- */
+        @media (max-width: 1024px) {
+            .workspace { flex-direction: column; height: auto; }
+            .editor-pane { width: 100%; height: 40vh; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .preview-pane { width: 100%; height: auto; }
+            body { overflow-y: auto; }
+        }
+
+        /* --- Print Mode --- */
+        @media print {
+            @page { margin: 10mm; size: A4; }
+            body { background: white; display: block; height: auto; }
+            header, .editor-pane, .toast { display: none !important; }
+            .preview-pane { width: 100%; padding: 0; background: white; display: block; overflow: visible; }
+            #document-sheet { width: 100%; max-width: none; box-shadow: none; padding: 0; margin: 0; min-height: auto; }
+            
+            /* Print tweaks for bubbles */
+            .chat-bubble { 
+                border: 1px solid #ddd; 
+                page-break-inside: avoid;
+                box-shadow: none;
+            }
+            .chat-row.user .chat-bubble {
+                background-color: #f0f7ff !important; /* Lighter blue for print ink saving */
+                color: black !important;
+                border-color: #2563eb;
+            }
+            .chat-row.user .chat-bubble code { color: #c92a2a; background: #f6f8fa; }
+        }
+    </style>
 </head>
 <body>
-    <h1>App 2</h1>
-    <p>This is a placeholder for App 2.</p>
+
+<header>
+    <div class="brand">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+        </svg>
+        <span>AI Chat Exporter</span>
+    </div>
+    <div class="status" id="saveStatus"></div>
+    <div class="controls">
+        <button class="btn" onclick="loadDraft()">Load</button>
+        <button class="btn" onclick="setTheme('default')">Default</button>
+        <button class="btn" onclick="setTheme('dark')">Dark Mode</button>
+        <button class="btn btn-success" onclick="saveDraft()">Save</button>
+        <button class="btn" onclick="clearText()">Clear</button>
+        <button class="btn btn-print" onclick="window.print()">Export PDF</button>
+    </div>
+</header>
+
+<div class="workspace">
+    <div class="editor-pane">
+        <div class="pane-header">
+            <span>Input (Markdown/Text)</span>
+            <span class="char-count" id="charCount">0 chars</span>
+        </div>
+        <div style="padding: 10px 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb;">
+            <button class="btn" onclick="pasteFromClipboard()">Paste Copied Text</button>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+                <strong>Instructions:</strong>
+                <ol>
+                    <li>Paste your chat conversation into the text area below.</li>
+                    <li>The app will automatically format it into chat bubbles.</li>
+                    <li>Edit the Title, Date, and Source fields in the preview.</li>
+                    <li>Use the "Export PDF" button to save your chat.</li>
+                </ol>
+            </div>
+        </div>
+        <textarea 
+            id="inputBox" 
+            placeholder="Paste your conversation here.&#10;&#10;The tool will auto-detect speakers if lines start with:&#10;'User:', 'You', 'AI:', 'ChatGPT', 'Claude', etc."
+            spellcheck="false"
+            autocomplete="off"
+        ></textarea>
+    </div>
+
+    <div class="preview-pane">
+        <div id="document-sheet">
+            <div class="doc-header">
+                <input type="text" class="editable doc-title" id="docTitle" value="Enter Title Here" autocomplete="off">
+                <div class="meta-row">
+                    <span>Date: <input type="text" class="editable" id="dateField" style="width:150px" value="Enter Date Here" autocomplete="off"></span>
+                    <span>Source: <input type="text" class="editable" id="sourceField" value="Enter Source Here" style="width:150px" autocomplete="off"></span>
+                </div>
+            </div>
+
+            <div id="outputContent">
+                <p style="color:#9ca3af; font-style:italic; text-align:center;">Preview will appear here...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // --- Configuration ---
+    marked.setOptions({ breaks: true, gfm: true });
+
+    // --- State & DOM ---
+    const elements = {
+        input: document.getElementById('inputBox'),
+        output: document.getElementById('outputContent'),
+        title: document.getElementById('docTitle'),
+        date: document.getElementById('dateField'),
+        source: document.getElementById('sourceField'),
+        count: document.getElementById('charCount'),
+        status: document.getElementById('saveStatus')
+    };
+
+    // --- Color Logic for Dark Mode ---
+    const speakerColorCache = {};
+    const lightColors = [
+        '#FFFFFF', // Pure White
+        '#F5F5F5', // White Smoke
+        '#E8E8E8', // Platinum
+        '#FAFAFA', // Snow
+        '#F0F8FF', // Alice Blue
+        '#F5FFFA', // Mint Cream
+        '#FFFACD', // Lemon Chiffon
+        '#FFF0F5', // Lavender Blush
+        '#F8F8FF', // Ghost White
+        '#F0FFF0'  // Honeydew
+    ];
+
+    function getColorForSpeaker(speaker) {
+        if (speakerColorCache[speaker]) {
+            return speakerColorCache[speaker];
+        }
+        // Simple hash function to get a consistent color
+        let hash = 0;
+        for (let i = 0; i < speaker.length; i++) {
+            hash = speaker.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        // Ensure the hash is positive
+        const index = Math.abs(hash) % lightColors.length;
+        const color = lightColors[index];
+        speakerColorCache[speaker] = color;
+        return color;
+    }
+
+    // --- Identification Keywords ---
+    // These keywords at the start of a line trigger a new bubble
+    const userKeywords = ['user', 'you', 'me', 'human', 'prompter'];
+    const aiKeywords = ['ai', 'chatgpt', 'claude', 'gemini', 'grok', 'llama', 'copilot', 'assistant', 'model', 'bot'];
+
+    function init() {
+        setTheme(localStorage.getItem('chatTheme') || 'default'); // Apply saved theme
+        resetMetaOnReload();
+        
+        // Set date if still empty after potential reload reset
+        if (!elements.date.value || elements.date.value === "Enter Date Here") {
+            const today = new Date();
+            elements.date.value = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        
+        elements.input.addEventListener('input', () => {
+            handleInput();
+            scheduleAutoSave();
+        });
+        // Handle rich text pasting by converting it to clean plain text
+        elements.input.addEventListener('paste', handlePaste);
+
+        // Tab support in textarea
+        elements.input.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                document.execCommand('insertText', false, "    ");
+            }
+        });
+
+        loadAutoSave();
+    }
+
+    function setTheme(theme) {
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('chatTheme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('chatTheme', 'default');
+        }
+    }
+
+    function resetMetaOnReload() {
+      const nav = performance.getEntriesByType('navigation')[0];
+      const wasReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
+      if (wasReload) {
+        elements.title.value = 'Enter Title Here';
+        elements.source.value = 'Enter Source Here';
+        const today = new Date();
+        elements.date.value = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    }
+
+    async function pasteFromClipboard() {
+        if (navigator.clipboard && navigator.clipboard.read) {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                let pastedText = '';
+
+                for (const item of clipboardItems) {
+                    if (item.types.includes('text/html')) {
+                        const blob = await item.getType('text/html');
+                        const htmlText = await blob.text();
+                        pastedText = convertHtmlToPreserveBreaks(htmlText);
+                        break; 
+                    } else if (item.types.includes('text/plain') && !pastedText) {
+                        const blob = await item.getType('text/plain');
+                        pastedText = await blob.text();
+                    }
+                }
+                
+                if (pastedText) {
+                    const input = elements.input;
+                    const selStart = input.selectionStart;
+                    const selEnd = input.selectionEnd;
+                    const currentText = input.value;
+                    input.value = currentText.substring(0, selStart) + pastedText + currentText.substring(selEnd);
+                    input.selectionStart = input.selectionEnd = selStart + pastedText.length;
+                    handleInput();
+                } else {
+                    showToast('No text found on clipboard.');
+                }
+
+            } catch (err) {
+                console.error('Failed to read clipboard using modern API: ', err);
+                tryFallbackPaste();
+            }
+        } else {
+            tryFallbackPaste();
+        }
+    }
+
+    function tryFallbackPaste() {
+        elements.input.focus();
+        const success = document.execCommand('paste');
+        if (!success) {
+            showToast('Paste from button not supported in this browser. Please use Ctrl+V.');
+        }
+    }
+
+    function handlePaste(e) {
+        e.preventDefault();
+        const cd = e.clipboardData || window.clipboardData;
+        let pastedText = '';
+
+        const html = cd.getData('text/html');
+        const plain = cd.getData('text/plain');
+
+        if (html) {
+            pastedText = convertHtmlToPreserveBreaks(html);
+        } else if (plain) {
+            pastedText = plain;
+        }
+
+        // Aggressively clean invisible characters and normalize whitespace
+        pastedText = pastedText
+            .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width spaces
+            .replace(/\r\n/g, '\n') // Normalize line endings
+            .replace(/\n{3,}/g, '\n\n'); // Collapse excessive blank lines
+
+        document.execCommand('insertText', false, pastedText.trim());
+    }
+
+    function convertHtmlToPreserveBreaks(htmlString) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlString;
+
+        // Add newlines before block elements to ensure they are on a new line
+        tempDiv.querySelectorAll('p, div, li, h1, h2, h3, blockquote').forEach(el => {
+            el.insertAdjacentText('beforebegin', '\n'); 
+        });
+        
+        // Replace <br> tags with newlines
+        tempDiv.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+
+        // Use textContent which is more literal than innerText
+        let text = tempDiv.textContent || '';
+        
+        // Clean up excessive newlines, preserving up to two for paragraph breaks
+        text = text.replace(/(\n\s*){3,}/g, '\n\n');
+
+        return text.trim();
+    }
+
+    function handleInput() {
+        const text = elements.input.value;
+        elements.count.textContent = `${text.length.toLocaleString()} chars`;
+        renderChat(text);
+        updateMetadata(text);
+    }
+
+    function updateMetadata(text) {
+        const segments = parseSegments(text);
+
+        // 1. Detect LLM source only if it's the default or empty
+        if (elements.source.value === 'Enter Source Here' || elements.source.value === 'AI Assistant' || elements.source.value === '') {
+            const aiSegments = segments.filter(s => s.type === 'ai');
+            let detectedSource = null;
+            if (aiSegments.length > 0) {
+                // Find the first AI speaker that isn't just "AI"
+                const specificAi = aiSegments.find(s => s.speaker.toLowerCase() !== 'ai' && s.speaker.toLowerCase() !== 'assistant');
+                if (specificAi) {
+                    detectedSource = specificAi.speaker;
+                } else if (aiSegments.length > 0) {
+                    detectedSource = aiSegments[0].speaker; // Fallback to the first one, e.g., "AI"
+                }
+            }
+
+            if (detectedSource) {
+                elements.source.value = detectedSource;
+            } else {
+                elements.source.value = 'AI Assistant';
+            }
+        }
+
+        // 2. Detect Topic only if it's the default or empty
+        if (elements.title.value === 'Enter Title Here' || elements.title.value === 'Conversation Log' || elements.title.value === '') {
+            let potentialTitle = "Conversation Log";
+            const lines = text.trim().split('\n');
+
+            if (lines.length > 0) {
+                const firstSignificantLine = lines.find(l => l.trim().length > 0) || '';
+                // A "heading" is a good title candidate.
+                if (firstSignificantLine.trim().startsWith('#')) {
+                    potentialTitle = firstSignificantLine.trim().replace(/^#+\s*/, '').trim();
+                } else {
+                    // Otherwise, find the first bit of user content.
+                    const userSegments = segments.filter(s => s.type === 'user' && s.content.trim().length > 0);
+                    if (userSegments.length > 0) {
+                        const firstUserContent = userSegments[0].content.trim();
+                        // Take the first line of the user's message
+                        potentialTitle = firstUserContent.split('\n')[0].trim();
+                        // Truncate if it's too long
+                        if (potentialTitle.length > 60) {
+                            potentialTitle = potentialTitle.substring(0, 57) + "...";
+                        }
+                    }
+                    // If we still have nothing, don't change from default
+                    if (potentialTitle.trim() === '...' || potentialTitle.trim() === '') potentialTitle = "Conversation Log";
+                }
+            }
+            elements.title.value = potentialTitle;
+        }
+    }
+
+    function parseSegments(text) {
+        // This function combines multiple parsing strategies to create a list of chat segments.
+        let segments = parseByLabels(text);
+
+        const hasKnownLabels = segments.some(s => s.type === 'user' || s.type === 'ai');
+        if (segments.length < 2 || !hasKnownLabels) {
+            const alternateSegments = parseByAlternatingTurns(text);
+            if (alternateSegments.length > 1) {
+                segments = alternateSegments;
+            }
+        }
+        
+        if (segments.length < 2) {
+             const heuristicSegments = parseByHeuristicSplit(text);
+             if (heuristicSegments.length > 1) {
+                 segments = heuristicSegments;
+             }
+        }
+        
+        return segments;
+    }
+
+    function renderChat(text) {
+        if (!text.trim()) {
+            elements.output.innerHTML = '<p style="color:#9ca3af; font-style:italic; text-align:center;">Preview will appear here...</p>';
+            return;
+        }
+
+        // --- Multi-strategy Parsing ---
+        const segments = parseSegments(text);
+
+        // 4. If no structure is found, fall back to a single markdown block.
+        if (segments.length <= 1) {
+            const safeHTML = DOMPurify.sanitize(marked.parse(text));
+            elements.output.innerHTML = `<div class="markdown-body standard-doc">${safeHTML}</div>`;
+            return;
+        }
+
+        // --- Render Chat Bubbles ---
+        let html = '<div class="chat-container">';
+        segments.forEach(seg => {
+            if (!seg.content.trim()) return;
+            const rawHtml = marked.parse(seg.content);
+            const safeHtml = DOMPurify.sanitize(rawHtml);
+            const alignClass = seg.type === 'user' ? 'user' : 'ai';
+            
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const color = isDarkMode ? getColorForSpeaker(seg.speaker) : '';
+            const style = color ? `style="color: ${color};"` : '';
+            const labelHtml = `<div class="speaker-label" ${style}>${seg.speaker}</div>`;
+
+            html += `
+                <div class="chat-row ${alignClass}">
+                    <div class="chat-bubble" ${style}>
+                        ${seg.type !== 'unknown' ? labelHtml : ''}
+                        <div class="markdown-body">${safeHtml}</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        elements.output.innerHTML = html;
+    }
+
+    function parseByAlternatingTurns(text) {
+        const blocks = text.trim().split(/\n\s*\n+/);
+        if (blocks.length < 2) return [];
+        const segments = [];
+        let isUserTurn = true;
+        blocks.forEach(block => {
+            const content = block.trim();
+            if (content) {
+                segments.push({
+                    type: isUserTurn ? 'user' : 'ai',
+                    speaker: isUserTurn ? 'User' : 'Assistant',
+                    content: content
+                });
+                isUserTurn = !isUserTurn;
+            }
+        });
+        return segments;
+    }
+
+    function parseByHeuristicSplit(text) {
+        // This is a last-resort heuristic. It splits the text into paragraphs
+        // separated by at least one blank line and assumes they are alternating turns.
+        const blocks = text.trim().split(/\n\s*\n+/);
+        if (blocks.length < 2) return [];
+
+        return blocks.map((block, i) => ({
+            type: i % 2 === 0 ? 'user' : 'ai',
+            speaker: i % 2 === 0 ? 'User' : 'Assistant',
+            content: block.trim()
+        })).filter(seg => seg.content);
+    }
+
+    // --- Label-Based Parsing (Old Method) ---
+    function parseByLabels(text) {
+        const lines = text.split('\n');
+        const segments = [];
+        let currentSegment = { type: 'unknown', speaker: 'Unknown', content: '' };
+        
+        // Regex to catch lines like: "**User:**", "You said:", "ChatGPT:", "## Claude"
+        const speakerRegex = new RegExp(`^(\\*\\*|##\\s|)(\\s*)(${[...userKeywords, ...aiKeywords].join('|')})(:|\\s+said|\\s+wrote|\\*\\*)?`, 'i');
+
+        lines.forEach(line => {
+            const match = line.match(speakerRegex);
+            
+            if (match) {
+                // Save previous segment if it has content
+                if (currentSegment.content.trim()) {
+                    segments.push(currentSegment);
+                }
+
+                // Start new segment
+                const detectedName = match[3].toLowerCase();
+                const isUser = userKeywords.includes(detectedName);
+                
+                // Clean the line (remove the "User:" part so it doesn't repeat inside the bubble)
+                // We keep the rest of the line in case there is text on the same line
+                let cleanLine = line.replace(match[0], '').trim();
+                // Remove trailing colon if regex missed it
+                if (cleanLine.startsWith(':')) cleanLine = cleanLine.substring(1).trim();
+
+                currentSegment = {
+                    type: isUser ? 'user' : 'ai',
+                    speaker: match[3].charAt(0).toUpperCase() + match[3].slice(1), // Capitalize
+                    content: cleanLine + '\n'
+                };
+            } else {
+                // Continue current segment
+                currentSegment.content += line + '\n';
+            }
+        });
+
+        // Push final segment
+        if (currentSegment.content.trim()) {
+            segments.push(currentSegment);
+        }
+
+        // --- Infer first speaker if unknown ---
+        if (segments.length > 1 && segments[0].type === 'unknown') {
+            const firstKnownSegment = segments[1];
+            if (firstKnownSegment.type === 'ai') {
+                segments[0].type = 'user';
+                segments[0].speaker = 'User';
+            } else if (firstKnownSegment.type === 'user') {
+                segments[0].type = 'ai';
+                segments[0].speaker = 'Assistant';
+            }
+        }
+        
+        return segments;
+    }
+
+    // --- Save/Load Logic ---
+    function saveDraft() {
+        const data = {
+            input: elements.input.value,
+            title: elements.title.value,
+            date: elements.date.value,
+            source: elements.source.value
+        };
+        localStorage.setItem('chatExporter_save', JSON.stringify(data));
+        showToast("Draft saved successfully");
+    }
+
+    function loadDraft() {
+        const data = JSON.parse(localStorage.getItem('chatExporter_save'));
+        if (data) {
+            elements.input.value = data.input || '';
+            elements.title.value = data.title || 'Conversation Log';
+            elements.date.value = data.date || elements.date.value;
+            elements.source.value = data.source || 'AI Assistant';
+            handleInput();
+            showToast("Draft loaded");
+        } else {
+            showToast("No saved draft found");
+        }
+    }
+
+    function scheduleAutoSave() {
+        if (window.saveTimer) clearTimeout(window.saveTimer);
+        window.saveTimer = setTimeout(() => {
+            const data = {
+                input: elements.input.value,
+                title: elements.title.value,
+                date: elements.date.value,
+                source: elements.source.value,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('chatExporter_auto', JSON.stringify(data));
+            elements.status.textContent = "Auto-saved";
+            setTimeout(() => elements.status.textContent = "", 2000);
+        }, 2000);
+    }
+
+    function loadAutoSave() {
+        const auto = JSON.parse(localStorage.getItem('chatExporter_auto'));
+        // Load auto-save if it's less than 24 hours old
+        if (auto && (Date.now() - auto.timestamp < 86400000)) {
+            elements.input.value = auto.input;
+            elements.title.value = auto.title;
+            elements.source.value = auto.source;
+            if (auto.date) elements.date.value = auto.date;
+            handleInput();
+        }
+    }
+
+    function clearText() {
+        if(confirm("Clear everything?")) {
+            elements.input.value = '';
+            handleInput();
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+</script>
+
 </body>
 </html>
