@@ -1,0 +1,19 @@
+body { font-family: Arial, sans-serif; background: #f4f4f8; margin: 0; padding: 0; }
+.container { max-width: 700px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.top-bar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.btn { padding: 10px 20px; font-size: 1em; border-radius: 8px; border: none; background: #0078d4; color: #fff; cursor: pointer; margin-left: 8px; }
+.btn:hover { background: #005fa3; }
+.input-area { width: 100%; height: 200px; font-size: 1.1em; padding: 12px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; box-sizing: border-box; }
+.chat { display: flex; flex-direction: column; }
+.bubble-row { display: flex; align-items: flex-start; margin-bottom: 10px; }
+.bubble-row.row-user { flex-direction: row-reverse; }
+.bubble { padding: 12px 18px; border-radius: 18px; max-width: 70%; position: relative; font-size: 1rem; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+.user { background: #d4edda; }
+.copilot { background: #e8d4ed; }
+.speaker { font-size: 0.85em; color: #888; margin-bottom: 4px; }
+.msg-checkbox { margin: 0 8px; }
+.hidden { display: none; }
+@media (max-width: 800px) {
+  .container { max-width: 98vw; padding: 8px; }
+  .bubble { font-size: 0.95em; }
+}
