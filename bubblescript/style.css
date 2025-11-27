@@ -233,6 +233,11 @@ header {
     font-size: 1.1rem;
 }
 
+.brand-text {
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
 .header-center {
     display: flex;
     align-items: center;
@@ -265,6 +270,8 @@ header {
 .btn-print:hover { background-color: var(--primary-hover); }
 .btn-success { background-color: var(--success-color); }
 .btn-success:hover { background-color: #059669; }
+        .btn-danger { background-color: #dc2626; }
+        .btn-danger:hover { background-color: #b91c1c; }
 
 .status {
     font-size: 0.85rem;
@@ -417,6 +424,28 @@ body.dark-mode .meta-row {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     font-size: 15px;
     line-height: 1.5;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .chat-bubble .delete-checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+
+        .chat-bubble:hover .delete-checkbox {
+            opacity: 1;
+        }
+
+        .chat-row.selected-for-deletion .chat-bubble {
+            background-color: #fee2e2 !important; /* Light red */
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
 }
 
 /* User Bubble Style */
@@ -491,6 +520,15 @@ body.dark-mode .meta-row {
     color: #9ca3af;
     font-style: italic;
     text-align: center;
+}
+
+.app-description {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 6px;
 }
 
 .pane-sub-header {

@@ -161,6 +161,7 @@ function init() {
     document.getElementById('btnClear').addEventListener('click', clearText);
     document.getElementById('btnPrint').addEventListener('click', () => window.print());
     document.getElementById('btnPaste').addEventListener('click', pasteFromClipboard);
+    document.getElementById('btnDeleteSelected').addEventListener('click', deleteSelectedBubbles);
     
     elements.input.addEventListener('input', () => {
         if (elements.input.value.length > CONFIG.MAX_INPUT_SIZE) {
@@ -238,6 +239,10 @@ function init() {
         }
     });
 
+    // Use event delegation for checkbox changes
+    elements.output.addEventListener('change', (e) => {
+        if (e.target.matches('.delete-checkbox')) toggleDeleteButtonVisibility();
+    });
     // Add confirmation before leaving the page if there's unsaved text
     window.addEventListener('beforeunload', (e) => {
         // Clear all pending timers to prevent memory leaks on unload
@@ -661,7 +666,8 @@ renderChat(text, segments = null) {
             newRow.innerHTML = `
                 <div class="chat-bubble">
                     <div class="speaker-label">${seg.speaker}</div>
-                    <div class="markdown-body" contenteditable="true">${safeHtml}</div>
+                    <div class="markdown-body" contenteditable="true" data-index="${index}">${safeHtml}</div>
+                    <input type="checkbox" class="delete-checkbox" data-index="${index}" aria-label="Select this message for deletion">
                 </div>
             `;
             
@@ -684,6 +690,56 @@ renderChat(text, segments = null) {
     }
 }
 }; 
+
+/**
+ * Toggles the visibility of the "Delete Selected" button based on checkbox states.
+ */
+function toggleDeleteButtonVisibility() {
+    const checkedBoxes = elements.output.querySelectorAll('.delete-checkbox:checked');
+    const deleteBtn = document.getElementById('btnDeleteSelected');
+    
+    if (checkedBoxes.length > 0) {
+        deleteBtn.style.display = 'inline-flex';
+        deleteBtn.textContent = `Delete Selected (${checkedBoxes.length})`;
+    } else {
+        deleteBtn.style.display = 'none';
+    }
+
+    // Add a visual style to the parent row of checked bubbles
+    const allCheckboxes = elements.output.querySelectorAll('.delete-checkbox');
+    allCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('.chat-row');
+        if (row) {
+            row.classList.toggle('selected-for-deletion', checkbox.checked);
+        }
+    });
+}
+
+/**
+ * Deletes all bubbles that have been selected via checkbox.
+ */
+function deleteSelectedBubbles() {
+    const checkedBoxes = elements.output.querySelectorAll('.delete-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        showToast("No bubbles selected to delete.");
+        return;
+    }
+
+    const indicesToDelete = new Set(Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.index, 10)));
+    
+    const segments = Parser.parseSegments(elements.input.value);
+    let newText = '';
+
+    segments.forEach((segment, index) => {
+        if (!indicesToDelete.has(index)) {
+            // Reconstruct the text from the segments we want to keep
+            newText += (segment.originalPrefix || '') + segment.content.trim() + '\n\n';
+        }
+    });
+
+    elements.input.value = newText.trim();
+    handleInput(false); // Re-render the chat immediately
+}
 
 function convertBubbleHtmlToText(bubbleNode) {
     if (typeof DOMPurify === 'undefined') return bubbleNode.textContent;

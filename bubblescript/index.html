@@ -18,7 +18,7 @@
     ">
     <meta name="referrer-policy" content="strict-origin-when-cross-origin">
     <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), midi=(), encrypted-media=(), oversized-images=()">
-    <title>Universal AI Chat Exporter</title>
+    <title>Easy Copy & Paste to PDF for ChatGPT, Copilot & More!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css" integrity="sha512-bm684OXnsiNuQSyrxuuwo4PHqr3OzxPpXyhT66DA/fhl73e1JmBxRKGnO/nRwWvOZxJLRCmNH7FII+Yn1JNPmg==" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js" integrity="sha512-oSA0PdOBsyP4Cv5rIHOWhOr+H0ZPOE/L8UKaX33DjBFD+TrWOZZfewjg85Z7WhNPkQrHeTKOYSio/XM6FBPhWA==" crossorigin="anonymous"></script>
@@ -31,7 +31,7 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
         </svg>
-        <span>AI Chat Exporter</span>
+        <span class="brand-text">Easy Copy & Paste to PDF for ChatGPT, Copilot & More!</span>
     </div>
     <div class="status" id="saveStatus"></div>
     <div class="controls" role="navigation" aria-label="Main controls">
@@ -42,6 +42,7 @@
         <button type="button" class="btn btn-success" id="btnSave" aria-label="Save current draft">Save</button>
         <button type="button" class="btn" id="btnClear" aria-label="Clear all content">Clear</button>
         <button type="button" class="btn btn-print" id="btnPrint" aria-label="Print or export to PDF">Export PDF</button>
+        <button type="button" class="btn btn-danger" id="btnDeleteSelected" aria-label="Delete selected bubbles" style="display: none;">Delete Selected</button>
     </div>
 </header>
 
@@ -54,6 +55,9 @@
         </div>
         <div class="pane-sub-header">
             <button type="button" class="btn" id="btnPaste">Paste Copied Text</button>
+            <div class="app-description">
+                This application transforms raw text from AI chat conversations (like those with ChatGPT, Copilot, or Claude) into a clean, well-formatted document. It automatically detects speakers and organizes the dialogue into chat bubbles. You can then edit the title and date before printing or exporting to PDF.
+            </div>
             <div class="instructions-box">
                 <strong>Instructions:</strong>
                 <ol>
