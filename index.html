@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,23 +6,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Projects</title>
     <style>
-        body { font-family: sans-serif; }
+        body {
+            font-family: sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
         .app-card {
             border: 1px solid #ccc;
             padding: 1rem;
-            margin: 1rem;
+            margin: 1rem auto;
             border-radius: 0.5rem;
+            max-width: 300px;
+            text-align: center;
+            background-color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
         .app-card a {
             text-decoration: none;
-            color: #333;
+            color: #0288D1;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .app-card a:hover {
+            color: #01579B;
         }
     </style>
 </head>
 <body>
     <h1>My Projects</h1>
-    <div class="app-card"><a href="Copilot_CopyPaste_Export_SMS_Style_Conversation/">Copilot Bubble App</a></div>
-    <div class="app-card"><a href="BubbleScript/">BubbleScript App</a>
-    <div class="app-card"><a href="app3/">App 3</a></div>
+    <div class="app-card">Copilot_CopyPaste_Export_SMS_Style_Conversation/Copilot Bubble App</a></div>
+    <div class="app-card">BubbleScript/BubbleScript App</a></div>
+    <div class="app-card">app3/App 3</a></div>
 </body>
 </html>
