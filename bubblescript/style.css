@@ -283,6 +283,13 @@ header {
 .status.saved { color: var(--success-color); }
 
 /* --- Main Layout --- */
+main {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden; /* Prevent content from spilling out */
+}
+
 .workspace {
     display: flex;
     flex: 1;
