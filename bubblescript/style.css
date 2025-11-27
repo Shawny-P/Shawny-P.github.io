@@ -196,6 +196,28 @@ body.theme-fresh-lime {
 }
 body.theme-fresh-lime .preview-pane, body.theme-fresh-lime #document-sheet { background-color: #F8FCF4; }
 
+/* --- Fat Albert Theme --- */
+body.theme-fat-albert {
+    --bg-color: #EAEAEA;
+    --header-bg: #004A7F; /* Dark Blue */
+    --border-color: #DCDCDC;
+    --primary-color: #E54D26; /* Red-Orange */
+    --primary-hover: #D34521;
+    --text-muted: #444;
+    --bubble-user-bg: #E54D26;
+    --bubble-user-text: #ffffff;
+    --bubble-ai-bg: #E3F2FD; /* Light Blue */
+    --bubble-ai-text: #263238;
+}
+body.theme-fat-albert #document-sheet {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)), url('fatalbert.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: local; /* Ensures the background scrolls with the content */
+}
+
+
 * { box-sizing: border-box; }
 
 body {

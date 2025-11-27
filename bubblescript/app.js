@@ -74,6 +74,7 @@ const themes = [
     'berry-burst', 
     'fresh-lime'
 ];
+themes.push('fat-albert'); // Add the new theme
 
 // SECURE: Whitelist of valid themes
 const VALID_THEMES = [...themes];
