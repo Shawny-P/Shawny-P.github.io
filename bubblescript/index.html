@@ -4,6 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self'; 
+        script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; 
+        style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; 
+        img-src 'self' data: https:;
+        font-src 'self' https://cdnjs.cloudflare.com;
+        connect-src 'none';
+        frame-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'none';
+    ">
     <title>Universal AI Chat Exporter</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
@@ -215,6 +227,7 @@
             margin: 0;
             padding: 0;
             background-color: var(--bg-color);
+            min-height: 100vh;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -330,6 +343,7 @@
         .preview-pane {
             width: 65%;
             background-color: white;
+            background-color: var(--bg-color);
             overflow-y: auto;
             padding: 40px;
             display: flex;
@@ -495,6 +509,10 @@
             .workspace { flex-direction: column; height: auto; }
             .editor-pane { width: 100%; height: 40vh; border-right: none; border-bottom: 1px solid var(--border-color); }
             .preview-pane { width: 100%; height: auto; }
+            .editor-pane { width: 100%; height: 50vh; min-height: 300px; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .preview-pane { width: 100%; height: auto; flex-grow: 1; }
+            .editor-pane { width: 100%; height: 50vh; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .preview-pane { width: 100%; height: 50vh; }
             body { overflow-y: auto; }
         }
 
@@ -513,35 +531,55 @@
                 box-shadow: none;
             }
             .chat-row.user .chat-bubble {
-                background-color: #f0f7ff !important; /* Lighter blue for print ink saving */
-                color: black !important;
+                background-color: #f0f7ff; /* Lighter blue for print ink saving */
                 border-color: #2563eb;
             }
-            .chat-row.user .chat-bubble code { color: #c92a2a; background: #f6f8fa; }
+            /* Ensure all text inside user bubbles is black for print, avoiding !important */
+            .chat-row.user .chat-bubble,
+            .chat-row.user .chat-bubble .markdown-body,
+            .chat-row.user .chat-bubble a {
+                color: black;
+            }
+            .chat-row.user .chat-bubble code,
+            .chat-row.ai .chat-bubble code { 
+                border: 1px solid #ddd;
+            }
+            /* Prevent bubbles from splitting across pages */
+            .chat-row, .chat-bubble {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+        @media print {
+            .chat-row, .chat-bubble {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         }
     </style>
 </head>
 <body>
 
-<header>
+<header role="banner">
     <div class="brand">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" viewBox="0 0 24 24">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
         </svg>
         <span>AI Chat Exporter</span>
     </div>
     <div class="status" id="saveStatus"></div>
-    <div class="controls">
-        <button class="btn" onclick="loadDraft()">Load</button>
-        <button class="btn" onclick="setTheme('light')">Light</button>
-        <button class="btn" onclick="setTheme('dark')">Dark Mode</button>
-        <button class="btn" onclick="cycleTheme()">Cycle Theme</button>
-        <button class="btn btn-success" onclick="saveDraft()">Save</button>
-        <button class="btn" onclick="clearText()">Clear</button>
-        <button class="btn btn-print" onclick="window.print()">Export PDF</button>
+    <div class="controls" role="navigation" aria-label="Main controls">
+        <button type="button" class="btn" onclick="Storage.load()" aria-label="Load saved draft">Load</button>
+        <button type="button" class="btn" onclick="setTheme('light')" aria-label="Switch to light theme">Light</button>
+        <button type="button" class="btn" onclick="setTheme('dark')" aria-label="Switch to dark theme">Dark Mode</button>
+        <button type="button" class="btn" onclick="cycleTheme()" aria-label="Cycle to next theme">Cycle Theme</button>
+        <button type="button" class="btn btn-success" onclick="Storage.save()" aria-label="Save current draft">Save</button>
+        <button type="button" class="btn" onclick="clearText()" aria-label="Clear all content">Clear</button>
+        <button type="button" class="btn btn-print" onclick="window.print()" aria-label="Print or export to PDF">Export PDF</button>
     </div>
 </header>
 
+<main role="main">
 <div class="workspace">
     <div class="editor-pane">
         <div class="pane-header">
@@ -549,7 +587,7 @@
             <span class="char-count" id="charCount">0 chars</span>
         </div>
         <div style="padding: 10px 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb;">
-            <button class="btn" onclick="pasteFromClipboard()">Paste Copied Text</button>
+            <button type="button" class="btn" onclick="pasteFromClipboard()">Paste Copied Text</button>
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
                 <strong>Instructions:</strong>
                 <ol>
@@ -575,10 +613,10 @@
     <div class="preview-pane">
         <div id="document-sheet">
             <div class="doc-header">
-                <div contenteditable="true" class="editable doc-title" id="docTitle">Enter Title Here</div>
+                <div contenteditable="true" class="editable doc-title" id="docTitle" aria-label="Document Title" role="textbox">Enter Title Here</div>
                 <div class="meta-row">
-                    <span>Date: <input type="text" class="editable" id="dateField" style="width:150px" value="Enter Date Here" autocomplete="off"></span>
-                    <span>Source: <input type="text" class="editable" id="sourceField" value="Enter Source Here" style="width:150px" autocomplete="off"></span>
+                    <span>Date: <input type="text" class="editable" id="dateField" style="width:150px" value="Enter Date Here" autocomplete="off" aria-label="Document Date"></span>
+                    <span>Source: <input type="text" class="editable" id="sourceField" value="Enter Source Here" style="width:150px" autocomplete="off" aria-label="Conversation Source"></span>
                 </div>
             </div>
 
@@ -588,14 +626,43 @@
         </div>
     </div>
 </div>
+</main>
 
 <div class="toast" id="toast"></div>
 
 <script>
-    // --- Configuration ---
+    // === GLOBAL ERROR HANDLING ===
+    window.addEventListener('error', (e) => {
+        console.error('Global error:', e.error);
+        showToast('An error occurred. Check console for details.');
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+        console.error('Unhandled promise rejection:', e.reason);
+        showToast('An async error occurred. Check console for details.');
+    });
+
+    // === CONFIGURATION ===
+    const CONFIG = {
+        MAX_INPUT_SIZE: 5 * 1024 * 1024, // 5MB
+        AUTO_SAVE_DELAY: 2000,
+        RENDER_DEBOUNCE: 250,
+        USER_KEYWORDS: ['user', 'you', 'me', 'human', 'prompter'],
+        AI_KEYWORDS: ['ai', 'chatgpt', 'claude', 'gemini', 'grok', 'llama', 'copilot', 'assistant', 'model', 'bot']
+    };
+
     marked.setOptions({ breaks: true, gfm: true, strikethrough: false });
 
-    // --- State & DOM ---
+    // === STATE MANAGEMENT ===
+    const State = {
+        renderTimeout: null,
+        autoSaveTimeout: null,
+        isUpdatingFromPreview: false,
+        speakerColorCache: {},
+        currentThemeIndex: 0
+    };
+
+    // === DOM ELEMENTS ===
     const elements = {
         input: document.getElementById('inputBox'),
         output: document.getElementById('outputContent'),
@@ -621,14 +688,26 @@
         'berry-burst', 
         'fresh-lime'
     ];
-    let currentThemeIndex = 0;
 
-    // --- Color Logic for Dark Mode ---
-    const speakerColorCache = {};
+    // SECURE: Whitelist of valid themes
+    const VALID_THEMES = [
+        'light', 
+        'dark', 
+        'ocean-breeze', 
+        'sunset-glow', 
+        'tropical-vibes', 
+        'coral-reef', 
+        'sky-sand', 
+        'citrus-pop', 
+        'lavender-fields', 
+        'aqua-coral', 
+        'berry-burst', 
+        'fresh-lime'
+    ];
 
     function getColorForSpeaker(speaker) {
-        if (speakerColorCache[speaker]) {
-            return speakerColorCache[speaker];
+        if (State.speakerColorCache[speaker]) {
+            return State.speakerColorCache[speaker];
         }
         // Deterministic hash function to get a consistent hue from the speaker's name.
         let hash = 0;
@@ -638,17 +717,22 @@
         const hue = Math.abs(hash) % 360;
         // Use a fixed saturation and lightness suitable for dark backgrounds.
         const color = `hsl(${hue}, 90%, 75%)`;
-        speakerColorCache[speaker] = color;
+        State.speakerColorCache[speaker] = color;
         return color;
     }
 
-    // --- Identification Keywords ---
-    // These keywords at the start of a line trigger a new bubble
-    const userKeywords = ['user', 'you', 'me', 'human', 'prompter'];
-    const aiKeywords = ['ai', 'chatgpt', 'claude', 'gemini', 'grok', 'llama', 'copilot', 'assistant', 'model', 'bot'];
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Pre-compile keyword regexes for performance.
+    const userKeywordRegex = new RegExp(`\\b(${CONFIG.USER_KEYWORDS.map(escapeRegex).join('|')})\\b`, 'i');
+    const aiKeywordRegex = new RegExp(`\\b(${CONFIG.AI_KEYWORDS.map(escapeRegex).join('|')})\\b`, 'i');
 
     function init() {
-        setTheme(localStorage.getItem('chatTheme') || 'light'); // Apply saved theme
+        const savedTheme = localStorage.getItem('chatTheme');
+        // SECURE: Validate saved theme
+        setTheme(VALID_THEMES.includes(savedTheme) ? savedTheme : 'light');
         resetMetaOnReload();
         
         // Set date if still empty after potential reload reset
@@ -658,16 +742,47 @@
         }
         
         elements.input.addEventListener('input', () => {
-            handleInput();
-            scheduleAutoSave();
+            if (elements.input.value.length > CONFIG.MAX_INPUT_SIZE) {
+                elements.input.value = elements.input.value.substring(0, CONFIG.MAX_INPUT_SIZE);
+                showToast(`Input truncated to ${(CONFIG.MAX_INPUT_SIZE / 1024 / 1024).toFixed(1)}MB limit`);
+            }
+            handleInput(true); // Debounce rendering
         });
         // Handle rich text pasting by converting it to clean plain text
         elements.input.addEventListener('paste', handlePaste);
+        
+        // --- CRITICAL SECURITY FIX: Sanitize contenteditable inputs ---
+        // 1. Force all pastes into contenteditable bubbles to be plain text.
+        elements.output.addEventListener('paste', (e) => {
+            if (e.target && e.target.matches('.markdown-body[contenteditable="true"]')) {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                document.execCommand('insertText', false, text);
+            }
+        }, true); // Use capture phase
 
-        // Prevent rich text pasting into editable divs
-        document.querySelectorAll('div[contenteditable="true"]').forEach(div => {
-            div.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
-        });
+        // 2. Sanitize any input (typing, drag-drop, etc.) in real-time.
+        elements.output.addEventListener('input', (e) => {
+            if (e.target && e.target.matches('.markdown-body[contenteditable="true"]')) {
+                // Immediately sanitize any pasted/edited content
+                const clean = DOMPurify.sanitize(e.target.innerHTML, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote'],
+                    ALLOWED_ATTR: ['class'],
+                    ALLOW_DATA_ATTR: false
+                });
+                if (clean !== e.target.innerHTML) {
+                    e.target.innerHTML = clean;
+                    // Reposition cursor at the end after sanitization
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.selectNodeContents(e.target);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    showToast("Potentially dangerous content was removed");
+                }
+            }
+        }, true); // Use capture phase
 
         // Tab support in textarea
         elements.input.addEventListener('keydown', function(e) {
@@ -685,8 +800,28 @@
             }
         }, true); // Use capture phase to ensure the event is caught reliably.
 
+        // Accessibility: Keyboard navigation for bubbles
+        elements.output.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && e.target.matches('.markdown-body[contenteditable="true"]')) {
+                const bubbles = Array.from(elements.output.querySelectorAll('.markdown-body[contenteditable="true"]'));
+                const currentIndex = bubbles.indexOf(e.target);
+                
+                if (e.shiftKey && currentIndex > 0) {
+                    e.preventDefault();
+                    bubbles[currentIndex - 1].focus();
+                } else if (!e.shiftKey && currentIndex < bubbles.length - 1) {
+                    e.preventDefault();
+                    bubbles[currentIndex + 1].focus();
+                }
+            }
+        });
+
         // Add confirmation before leaving the page if there's unsaved text
         window.addEventListener('beforeunload', (e) => {
+            // Clear all pending timers to prevent memory leaks on unload
+            if (State.renderTimeout) clearTimeout(State.renderTimeout);
+            if (State.autoSaveTimeout) clearTimeout(State.autoSaveTimeout);
+
             if (elements.input.value.trim().length > 0) {
                 // Standard way to trigger the browser's confirmation dialog
                 e.preventDefault();
@@ -698,20 +833,14 @@
     }
 
     function setTheme(theme) {
+        // SECURE: Validate theme against whitelist
+        if (!VALID_THEMES.includes(theme)) {
+            console.warn(`Invalid theme: ${theme}. Defaulting to light.`);
+            theme = 'light';
+        }
+
         // Remove all possible theme classes
-        document.body.classList.remove(
-            'dark-mode', 
-            'theme-ocean-breeze', 
-            'theme-sunset-glow', 
-            'theme-tropical-vibes', 
-            'theme-coral-reef', 
-            'theme-sky-sand', 
-            'theme-citrus-pop', 
-            'theme-lavender-fields', 
-            'theme-aqua-coral', 
-            'theme-berry-burst', 
-            'theme-fresh-lime'
-        );
+        document.body.className = document.body.className.replace(/theme-\S+|dark-mode/g, '').trim();
 
         if (theme !== 'light') {
             const className = theme === 'dark' ? 'dark-mode' : `theme-${theme}`;
@@ -719,13 +848,13 @@
         }
         
         localStorage.setItem('chatTheme', theme);
-        const themeIndex = themes.indexOf(theme);
-        currentThemeIndex = themeIndex !== -1 ? themeIndex : 0;
+        const themeIndex = VALID_THEMES.indexOf(theme);
+        State.currentThemeIndex = themeIndex !== -1 ? themeIndex : 0;
     }
 
     function cycleTheme() {
-        currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-        const nextTheme = themes[currentThemeIndex];
+        State.currentThemeIndex = (State.currentThemeIndex + 1) % themes.length;
+        const nextTheme = themes[State.currentThemeIndex];
         setTheme(nextTheme);
     }
 
@@ -744,8 +873,19 @@
     }
 
     async function pasteFromClipboard() {
-        if (navigator.clipboard && navigator.clipboard.read) {
-            try {
+        try {
+            if (!navigator.clipboard || !navigator.clipboard.read) {
+                showToast('Clipboard API not supported. Please use Ctrl+V / Cmd+V to paste.');
+                return;
+            }
+
+            const permission = await navigator.permissions.query({ name: 'clipboard-read' });
+            if (permission.state === 'denied') {
+                showToast('Clipboard access denied. Please use Ctrl+V to paste.');
+                return;
+            }
+
+            try { // Nested try for the actual read operation
                 const clipboardItems = await navigator.clipboard.read();
                 let pastedText = '';
 
@@ -773,13 +913,15 @@
                     showToast('No text found on clipboard.');
                 }
 
-            } catch (err) {
-                console.error('Failed to read clipboard using modern API: ', err);
+            } catch (readErr) {
+                console.error('Failed to read clipboard: ', readErr);
                 showToast('Could not read clipboard. Please use Ctrl+V / Cmd+V to paste.');
             }
-        } else {
-            showToast('Clipboard API not supported. Please use Ctrl+V / Cmd+V to paste.');
+        } catch (permErr) {
+            console.error('Clipboard permission error: ', permErr);
+            showToast('Could not access clipboard. Please use Ctrl+V / Cmd+V.');
         }
+
     }
 
     function handlePaste(e) {
@@ -826,15 +968,33 @@
         return text.trim();
     }
 
-    function handleInput() {
-        const text = elements.input.value;
-        elements.count.textContent = `${text.length.toLocaleString()} chars`;
-        renderChat(text);
-        updateMetadata(text);
+    function handleInput(debounce = false) {
+        if (State.renderTimeout) {
+            clearTimeout(State.renderTimeout);
+            State.renderTimeout = null;
+        }
+
+        const process = () => {
+            const text = elements.input.value;
+            elements.count.textContent = `${text.length.toLocaleString()} chars`;
+            
+            // Parse once, use twice for performance.
+            const segments = Parser.parseSegments(text);
+            Renderer.renderChat(text, segments);
+            updateMetadata(text, segments);
+            Storage.scheduleAutoSave();
+            State.renderTimeout = null;
+        };
+
+        if (debounce) {
+            State.renderTimeout = setTimeout(process, CONFIG.RENDER_DEBOUNCE);
+        } else {
+            process();
+        }
     }
 
-    function updateMetadata(text) {
-        const segments = parseSegments(text);
+    function updateMetadata(text, segments = null) {
+        if (!segments) segments = Parser.parseSegments(text);
 
         // 1. Detect LLM source only if it's the default or empty
         if (elements.source.value === 'Enter Source Here' || elements.source.value === 'AI Assistant' || !elements.source.value) {
@@ -887,156 +1047,37 @@
         }
     }
 
-    function parseSegments(text) {
+    // === PARSER MODULE ===
+    const Parser = {
+    /**
+     * Parses conversation text into structured segments using multiple strategies.
+     * @param {string} text - Raw conversation text.
+     * @returns {Array<{type: string, speaker: string, content: string}>} Parsed segments.
+     * @throws {Error} If text is not a string.
+     */
+    parseSegments(text) {
         // This function combines multiple parsing strategies to create a list of chat segments.
-        let segments = parseByLabels(text);
+        let segments = this.parseByLabels(text);
 
         const hasKnownLabels = segments.some(s => s.type === 'user' || s.type === 'ai');
         if (segments.length < 2 || !hasKnownLabels) {
-            const alternateSegments = parseByAlternatingTurns(text);
+            const alternateSegments = this.parseByAlternatingTurns(text);
             if (alternateSegments.length > 1) {
                 segments = alternateSegments;
             }
         }
         
         if (segments.length < 2) {
-             const heuristicSegments = parseByHeuristicSplit(text);
+             const heuristicSegments = this.parseByHeuristicSplit(text);
              if (heuristicSegments.length > 1) {
                  segments = heuristicSegments;
              }
         }
         
-        return segments;
-    }
+        return segments.filter(seg => seg.content.trim());
+    },
 
-    function renderChat(text) {
-        if (!text.trim()) {
-            elements.output.innerHTML = '<p style="color:#9ca3af; font-style:italic; text-align:center;">Preview will appear here...</p>';
-            return;
-        }
-
-        // --- Multi-strategy Parsing ---
-        const segments = parseSegments(text);
-
-        // 4. If no structure is found, fall back to a single markdown block.
-        if (segments.length <= 1) {
-            const safeHTML = DOMPurify.sanitize(marked.parse(text));
-            elements.output.innerHTML = `<div class="markdown-body standard-doc">${safeHTML}</div>`;
-            return;
-        }
-
-        // --- Render Chat Bubbles ---
-        let html = '<div class="chat-container">';
-        segments.forEach(seg => {
-            if (!seg.content.trim()) return;
-            const rawHtml = marked.parse(seg.content);
-            const safeHtml = DOMPurify.sanitize(rawHtml);
-            const alignClass = seg.type === 'user' ? 'user' : 'ai';
-            
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            const color = isDarkMode ? getColorForSpeaker(seg.speaker) : '';
-            const style = color ? `style="color: ${color};"` : '';
-            const labelHtml = `<div class="speaker-label" ${style}>${seg.speaker}</div>`;
-
-            html += `
-                <div class="chat-row ${alignClass}">
-                    <div class="chat-bubble" ${style}>
-                        ${seg.type !== 'unknown' ? labelHtml : ''}
-                        <div class="markdown-body" contenteditable="true">${safeHtml}</div>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        elements.output.innerHTML = html;
-    }
-
-    function convertBubbleHtmlToText(bubbleNode) {
-        // Create a temporary container to safely manipulate the HTML content
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = bubbleNode.innerHTML;
-
-        // Handle <pre><code> blocks to preserve code formatting
-        tempDiv.querySelectorAll('pre').forEach(pre => {
-            const code = pre.querySelector('code');
-            const lang = code ? (Array.from(code.classList).find(c => c.startsWith('language-')) || '').replace('language-', '') : '';
-            const codeText = pre.textContent;
-            // Replace the <pre> element with a markdown code fence text node
-            pre.replaceWith(document.createTextNode(`\n\`\`\`${lang}\n${codeText}\n\`\`\`\n`));
-        });
-
-        // Convert <br> tags to newlines for manual line breaks
-        tempDiv.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-
-        // For other block elements, ensure they are separated by newlines
-        tempDiv.querySelectorAll('p, ul, ol, blockquote, h1, h2, h3').forEach(block => {
-            // Insert a newline before the block if it's not the first element
-            if (block.previousSibling) {
-                block.before(document.createTextNode('\n'));
-            }
-        });
-
-        // Use textContent to get the final plain text with preserved structures
-        return tempDiv.textContent.trim();
-    }
-
-    function updateSourceFromPreview() {
-        const segments = parseSegments(elements.input.value);
-        const bubbles = elements.output.querySelectorAll('.markdown-body[contenteditable="true"]');
-
-        if (segments.length !== bubbles.length) {
-            // This can happen if the DOM is out of sync. A re-render is the safest option.
-            showToast("Preview out of sync. Re-rendering from source.");
-            handleInput();
-            return;
-        }
-
-        let updatedText = '';
-        segments.forEach((segment, index) => {
-            const bubbleNode = bubbles[index];
-            // Convert the edited HTML back to markdown-like text, preserving code blocks.
-            const newContent = convertBubbleHtmlToText(bubbleNode);
-            updatedText += (segment.originalPrefix || '') + newContent + '\n\n';
-        });
-        elements.input.value = updatedText.trim();
-        scheduleAutoSave(); // Trigger an auto-save after the edit is committed
-        scheduleAutoSave();
-    }
-
-    function parseByAlternatingTurns(text) {
-        const blocks = text.trim().split(/\n\s*\n+/);
-        if (blocks.length < 2) return [];
-        const segments = [];
-        let isUserTurn = true;
-        blocks.forEach(block => {
-            const content = block.trim();
-            if (content) {
-                segments.push({
-                    type: isUserTurn ? 'user' : 'ai',
-                    speaker: isUserTurn ? 'User' : 'Assistant',
-                    content: content
-                });
-                isUserTurn = !isUserTurn;
-            }
-        });
-        return segments;
-    }
-
-    function parseByHeuristicSplit(text) {
-        // This is a last-resort heuristic. It splits the text into paragraphs
-        // separated by at least one blank line and assumes they are alternating turns.
-        const blocks = text.trim().split(/\n\s*\n+/);
-        if (blocks.length < 2) return [];
-
-        return blocks.map((block, i) => ({
-            type: i % 2 === 0 ? 'user' : 'ai',
-            speaker: i % 2 === 0 ? 'User' : 'Assistant',
-            content: block.trim()
-        })).filter(seg => seg.content);
-    }
-
-    // --- Label-Based Parsing (Old Method) ---
-    function parseByLabels(text) {
+    parseByLabels(text) {
         const lines = text.split('\n');
         const segments = [];
         let currentSegment = { type: 'unknown', speaker: 'Unknown', content: '' };
@@ -1045,7 +1086,7 @@
         // 1. Permissive Regex: Catches any name followed by a colon, e.g., "Shawn:", "Patrick (User):"
         const permissiveSpeakerRegex = /^(.+?):\s+/;
         // 2. Keyword Regex (Fallback): Catches keywords like "User", "AI", "ChatGPT" even without a colon.
-        const keywordSpeakerRegex = new RegExp(`^(\\*\\*|##\\s|)?(\\s*)(${[...userKeywords, ...aiKeywords].join('|')})(\\*\\*|:|\\s+said)?`, 'i');
+        const keywordSpeakerRegex = new RegExp(`^(\\*\\*|##\\s|)?(\\s*)(${[...CONFIG.USER_KEYWORDS, ...CONFIG.AI_KEYWORDS].join('|')})(\\*\\*|:|\\s+said)?`, 'i');
 
         lines.forEach(line => {
             let match = line.match(permissiveSpeakerRegex);
@@ -1055,8 +1096,8 @@
             if (match && match[1]) { // Strategy 1: Matched "Name:"
                 speakerName = match[1].trim();
                 const lowerSpeaker = speakerName.toLowerCase();
-                isUser = userKeywords.some(k => lowerSpeaker.includes(k));
-                isAi = aiKeywords.some(k => lowerSpeaker.includes(k));
+                isUser = userKeywordRegex.test(lowerSpeaker);
+                isAi = aiKeywordRegex.test(lowerSpeaker);
                 originalPrefix = match[0];
 
             } else { // Strategy 2: Fallback to keyword matching
@@ -1064,7 +1105,7 @@
                 if (match && match[3]) {
                     speakerName = match[3];
                     const lowerSpeaker = speakerName.toLowerCase();
-                    isUser = userKeywords.includes(lowerSpeaker);
+                    isUser = CONFIG.USER_KEYWORDS.includes(lowerSpeaker);
                     isAi = true; // If not user, assume AI by keyword list
                     originalPrefix = match[0];
                 }
@@ -1117,57 +1158,322 @@
         }
         
         return segments;
+    },
+
+    parseByAlternatingTurns(text) {
+        const blocks = text.trim().split(/\n\s*\n+/);
+        if (blocks.length < 2) return [];
+        const segments = [];
+        let isUserTurn = true;
+        blocks.forEach(block => {
+            const content = block.trim();
+            if (content) {
+                segments.push({
+                    type: isUserTurn ? 'user' : 'ai',
+                    speaker: isUserTurn ? 'User' : 'Assistant',
+                    content: content
+                });
+                isUserTurn = !isUserTurn;
+            }
+        });
+        return segments;
+    },
+
+    parseByHeuristicSplit(text) {
+        // This is a last-resort heuristic. It splits the text into paragraphs
+        // separated by at least one blank line and assumes they are alternating turns.
+        const blocks = text.trim().split(/\n\s*\n+/);
+        if (blocks.length < 2) return [];
+
+        return blocks.map((block, i) => ({
+            type: i % 2 === 0 ? 'user' : 'ai',
+            speaker: i % 2 === 0 ? 'User' : 'Assistant',
+            content: block.trim()
+        })).filter(seg => seg.content);
     }
+    }; // End Parser Module
 
-    // --- Save/Load Logic ---
-    function saveDraft() {
-        const data = {
-            input: elements.input.value,
-            title: elements.title.textContent,
-            date: elements.date.value,
-            source: elements.source.value,
-            timestamp: Date.now()
-        };
-        localStorage.setItem('chatExporter_save', JSON.stringify(data));
-        showToast("Draft saved successfully");
-    }
+    // === RENDERER MODULE ===
+    const Renderer = {
+    renderChat(text, segments = null) {
+        if (!text.trim()) {
+            elements.output.innerHTML = '<p style="color:#9ca3af; font-style:italic; text-align:center;">Preview will appear here...</p>';
+            return;
+        }
 
-    function loadDraft() {
-        const autoSaveData = JSON.parse(localStorage.getItem('chatExporter_auto'));
-        const manualSaveData = JSON.parse(localStorage.getItem('chatExporter_save'));
+        if (!segments) segments = Parser.parseSegments(text);
+        
+        if (segments.length <= 1) {
+            const safeHTML = DOMPurify.sanitize(marked.parse(text));
+            elements.output.innerHTML = `<div class="markdown-body standard-doc">${safeHTML}</div>`;
+            return;
+        }
 
-        // Prioritize loading the most recent data, which is likely the auto-save.
-        const dataToLoad = (autoSaveData && autoSaveData.timestamp > (manualSaveData ? manualSaveData.timestamp || 0 : 0)) ? autoSaveData : manualSaveData;
-
-        if (dataToLoad) {
-            elements.input.value = dataToLoad.input || '';
-            elements.title.textContent = dataToLoad.title || 'Conversation Log';
-            elements.date.value = dataToLoad.date || elements.date.value;
-            elements.source.value = dataToLoad.source || 'AI Assistant';
-            handleInput();
-            showToast("Draft loaded");
-        } else {
-            showToast("No saved draft found");
+        // Virtual DOM approach - only update changed bubbles
+        const existingBubbles = elements.output.querySelectorAll('.chat-row');
+        
+        // Reuse existing container if possible
+        let container = elements.output.querySelector('.chat-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'chat-container';
+            elements.output.innerHTML = '';
+            elements.output.appendChild(container);
+        }
+        
+        segments.forEach((seg, index) => {
+            if (!seg.content.trim()) return;
+            
+            let row = existingBubbles[index];
+            // A simple diff check. More complex checks could compare data attributes.
+            const needsUpdate = !row || 
+                row.dataset.speaker !== seg.speaker ||
+                row.dataset.content !== seg.content;
+            
+            if (needsUpdate) {
+                const rawHtml = marked.parse(seg.content);
+                const safeHtml = DOMPurify.sanitize(rawHtml);
+                const alignClass = seg.type === 'user' ? 'user' : 'ai';
+                
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                const color = isDarkMode ? getColorForSpeaker(seg.speaker) : '';
+                const style = color ? `style="border-color: ${color};"` : '';
+                const labelHtml = seg.type !== 'unknown' 
+                    ? `<div class="speaker-label" style="color: ${color};">${seg.speaker}</div>` 
+                    : '';
+                
+                const newRow = document.createElement('div');
+                newRow.className = `chat-row ${alignClass}`;
+                newRow.dataset.speaker = seg.speaker; // Store state for diffing
+                newRow.dataset.content = seg.content; // Store state for diffing
+                newRow.innerHTML = `
+                    <div class="chat-bubble" ${style}>
+                        ${labelHtml}
+                        <div class="markdown-body" contenteditable="true">${safeHtml}</div>
+                    </div>
+                `;
+                
+                if (row) {
+                    container.replaceChild(newRow, row);
+                } else {
+                    container.appendChild(newRow);
+                }
+            }
+        });
+        
+        // Remove extra bubbles if the new text has fewer segments
+        while (container.children.length > segments.filter(s => s.content.trim()).length) {
+            container.removeChild(container.lastChild);
         }
     }
+    }; // End Renderer Module
 
-    function scheduleAutoSave() {
-        if (window.saveTimer) clearTimeout(window.saveTimer);
-        window.saveTimer = setTimeout(() => {
-            const data = {
-                // Note: The manual save function does not include a timestamp.
-                input: elements.input.value,
-                title: elements.title.textContent,
-                date: elements.date.value,
-                source: elements.source.value,
-                timestamp: Date.now()
-            };
-            localStorage.setItem('chatExporter_auto', JSON.stringify(data));
-            elements.status.textContent = "Auto-saved";
-            setTimeout(() => elements.status.textContent = "", 2000);
-        }, 2000);
+    function convertBubbleHtmlToText(bubbleNode) {
+        // CRITICAL SECURITY FIX: Sanitize the contenteditable HTML before processing to prevent XSS.
+        // This returns a safe DOM fragment.
+        // SECURE: Remove href attribute and restrict to safe tags only
+        const safeFragment = DOMPurify.sanitize(bubbleNode.innerHTML, {
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote'],
+            ALLOWED_ATTR: ['class'], // Removed 'href' to prevent javascript: URLs
+            RETURN_DOM_FRAGMENT: true,
+            ALLOW_DATA_ATTR: false
+        });
+
+        // Process the sanitized fragment
+        safeFragment.querySelectorAll('pre').forEach(pre => {
+            const code = pre.querySelector('code');
+            const lang = code ? (Array.from(code.classList).find(c => c.startsWith('language-')) || '').replace('language-', '') : '';
+            const codeText = pre.textContent;
+            // Replace the <pre> element with a markdown code fence text node
+            pre.replaceWith(document.createTextNode(`\n\`\`\`${lang}\n${codeText}\n\`\`\`\n`));
+        });
+        
+        // Convert <br> tags to newlines for manual line breaks
+        safeFragment.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+        
+        // For other block elements, ensure they are separated by newlines
+        safeFragment.querySelectorAll('p, ul, ol, blockquote').forEach(block => {
+            // Insert a newline before the block if it's not the first element
+            if (block.previousSibling) {
+                block.before(document.createTextNode('\n'));
+            }
+        });
+        
+        // Use textContent to get the final plain text with preserved structures
+        return safeFragment.textContent.trim();
     }
 
+    function updateSourceFromPreview() {
+        if (State.isUpdatingFromPreview) return;
+        State.isUpdatingFromPreview = true;
+
+        const segments = Parser.parseSegments(elements.input.value);
+        const bubbles = elements.output.querySelectorAll('.markdown-body[contenteditable="true"]');
+
+        if (segments.length !== bubbles.length) {
+            // This can happen if the DOM is out of sync. A re-render is the safest option.
+            showToast("Preview out of sync. Re-rendering from source.");
+            State.isUpdatingFromPreview = false;
+            handleInput(false); // Don't debounce, immediate update
+            return;
+        }
+
+        let updatedText = '';
+        segments.forEach((segment, index) => {
+            const bubbleNode = bubbles[index];
+            const newContent = convertBubbleHtmlToText(bubbleNode);
+            updatedText += (segment.originalPrefix || '') + newContent + '\n\n';
+        });
+        elements.input.value = updatedText.trim();
+        Storage.scheduleAutoSave();
+
+        // Allow updates again after a short delay
+        setTimeout(() => { State.isUpdatingFromPreview = false; }, 100);
+    }
+
+    // === STORAGE MODULE ===
+    const Storage = {
+    // Storage size limits
+    MAX_INPUT_SIZE: 5 * 1024 * 1024,    // 5MB
+    MAX_TITLE_SIZE: 500,                 // 500 chars
+    MAX_FIELD_SIZE: 200,                 // 200 chars
+    
+    save() {
+        try {
+            // Check storage quota
+            const storageSize = JSON.stringify(localStorage).length;
+            if (storageSize > 10 * 1024 * 1024) { // 10MB total limit
+                showToast("Storage limit reached. Please clear old data.");
+                return;
+            }
+            
+            const data = {
+                input: elements.input.value.substring(0, this.MAX_INPUT_SIZE),
+                title: elements.title.textContent.substring(0, this.MAX_TITLE_SIZE),
+                date: elements.date.value.substring(0, this.MAX_FIELD_SIZE),
+                source: elements.source.value.substring(0, this.MAX_FIELD_SIZE),
+                timestamp: Date.now()
+            };
+            localStorage.setItem('chatExporter_save', JSON.stringify(data));
+            showToast("Draft saved successfully");
+        } catch (e) {
+            console.error("Save failed:", e);
+            showToast("Failed to save: " + e.message);
+        }
+    },
+    load() {
+        try {
+            const autoSaveData = JSON.parse(localStorage.getItem('chatExporter_auto'));
+            const manualSaveData = JSON.parse(localStorage.getItem('chatExporter_save'));
+
+            const dataToLoad = (autoSaveData && autoSaveData.timestamp > (manualSaveData?.timestamp || 0))
+                ? autoSaveData 
+                : manualSaveData;
+
+            if (!dataToLoad) {
+                showToast("No saved draft found");
+                return;
+            }
+            
+            // SECURE: Comprehensive validation
+            if (typeof dataToLoad !== 'object' || dataToLoad === null) {
+                throw new Error('Invalid data format');
+            }
+            
+            // Validate types
+            if (typeof dataToLoad.input !== 'string' || 
+                typeof dataToLoad.title !== 'string' ||
+                typeof dataToLoad.date !== 'string' ||
+                typeof dataToLoad.source !== 'string') {
+                throw new Error('Invalid data structure');
+            }
+            
+            // SECURE: Validate sizes BEFORE processing
+            if (dataToLoad.input.length > this.MAX_INPUT_SIZE) {
+                throw new Error('Input data too large');
+            }
+            if (dataToLoad.title.length > this.MAX_TITLE_SIZE) {
+                throw new Error('Title too large');
+            }
+            if (dataToLoad.date.length > this.MAX_FIELD_SIZE ||
+                dataToLoad.source.length > this.MAX_FIELD_SIZE) {
+                throw new Error('Field data too large');
+            }
+            
+            // SECURE: Sanitize all text inputs
+            const cleanTitle = DOMPurify.sanitize(dataToLoad.title, {
+                ALLOWED_TAGS: [],
+                ALLOWED_ATTR: []
+            });
+            const cleanSource = DOMPurify.sanitize(dataToLoad.source, {
+                ALLOWED_TAGS: [],
+                ALLOWED_ATTR: []
+            });
+            const cleanDate = DOMPurify.sanitize(dataToLoad.date, {
+                ALLOWED_TAGS: [],
+                ALLOWED_ATTR: []
+            });
+            
+            // Apply sanitized data
+            elements.input.value = dataToLoad.input;
+            elements.title.textContent = cleanTitle || 'Conversation Log';
+            elements.date.value = cleanDate || new Date().toLocaleDateString();
+            elements.source.value = cleanSource || 'AI Assistant';
+            
+            handleInput();
+            showToast("Draft loaded");
+        } catch (e) {
+            console.error("Failed to load draft:", e);
+            showToast("Failed to load draft: " + e.message);
+            // Clear corrupted data
+            localStorage.removeItem('chatExporter_auto');
+            localStorage.removeItem('chatExporter_save');
+        }
+    },
+    scheduleAutoSave() {
+        if (State.autoSaveTimeout) {
+            clearTimeout(State.autoSaveTimeout);
+            State.autoSaveTimeout = null;
+        }
+        
+        State.autoSaveTimeout = setTimeout(() => {
+            try {
+                // SECURE: Check storage usage
+                const storageSize = JSON.stringify(localStorage).length;
+                if (storageSize > 10 * 1024 * 1024) {
+                    console.warn("Storage quota approaching limit");
+                    elements.status.textContent = "Storage nearly full";
+                    return;
+                }
+                
+                const data = {
+                    input: elements.input.value.substring(0, this.MAX_INPUT_SIZE),
+                    title: elements.title.textContent.substring(0, this.MAX_TITLE_SIZE),
+                    date: elements.date.value.substring(0, this.MAX_FIELD_SIZE),
+                    source: elements.source.value.substring(0, this.MAX_FIELD_SIZE),
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('chatExporter_auto', JSON.stringify(data));
+                elements.status.textContent = "Auto-saved";
+                elements.status.classList.add('saved');
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    elements.status.textContent = "Save failed: Storage full";
+                    showToast("Storage quota exceeded. Please export or clear data.");
+                } else {
+                    console.error("Auto-save failed:", e);
+                    elements.status.textContent = "Save failed";
+                }
+            }
+            setTimeout(() => {
+                elements.status.textContent = "";
+                elements.status.classList.remove('saved');
+            }, 3000);
+            State.autoSaveTimeout = null;
+        }, CONFIG.AUTO_SAVE_DELAY);
+    }
+    }; // End Storage Module
+    
     function clearText() {
         elements.input.value = '';
         resetFields();
@@ -1181,7 +1487,8 @@
         setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    init();
+    // === INITIALIZATION ===
+    document.addEventListener('DOMContentLoaded', init);
 </script>
 
 </body>
