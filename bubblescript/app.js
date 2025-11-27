@@ -386,6 +386,9 @@ function convertHtmlToPreserveBreaks(htmlString) {
     const doc = parser.parseFromString(htmlString, 'text/html');
     const tempDiv = doc.body; // Use the body of the parsed document
 
+    // FIX: Proactively remove all inline styles to prevent CSP violations.
+    tempDiv.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+
     // Add newlines before block elements to ensure they are on a new line
     tempDiv.querySelectorAll('p, div, li, h1, h2, h3, blockquote').forEach(el => {
         el.insertAdjacentText('beforebegin', '\n'); 
