@@ -7,10 +7,10 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self'; 
         script-src 'self' https://cdnjs.cloudflare.com; 
-        style-src 'self' https://cdnjs.cloudflare.com 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; 
+        style-src 'self' https://cdnjs.cloudflare.com; 
         img-src 'self' data: https:;
         font-src 'self' https://cdnjs.cloudflare.com;
-        connect-src 'self' https://cdnjs.cloudflare.com;
+        connect-src 'self' https://api.github.com;
         frame-src 'none';
         object-src 'none';
         base-uri 'self';
@@ -97,26 +97,12 @@
 
 <div class="toast" id="toast"></div>
 
+<footer id="app-footer">
+    <span id="update-status"></span>
+</footer>
+
 <script src="classifier.js" defer></script>
 <script src="app.js" defer></script>
-
-<!-- === Templates for Score Analysis Feature === -->
-<template id="analyze-icon-template">
-    <button type="button" class="analyze-btn" aria-label="Analyze Score">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-        </svg>
-    </button>
-</template>
-
-<div class="score-modal-overlay" id="scoreModalOverlay">
-    <div class="score-modal">
-        <h3>Classification Analysis</h3>
-        <div class="score-modal-content" id="scoreModalContent">
-            <!-- Score items will be injected here by JavaScript -->
-        </div>
-    </div>
-</div>
 
 </body>
 </html>

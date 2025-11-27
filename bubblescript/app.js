@@ -18,9 +18,6 @@ const CONFIG = {
     AI_KEYWORDS: ['ai', 'chatgpt', 'claude', 'gemini', 'grok', 'llama', 'copilot', 'assistant', 'model', 'bot']
 };
 
-// === CLASSIFIER INSTANCE ===
-const speakerClassifier = new SpeakerClassifier();
-
 if (typeof marked !== 'undefined') {
     marked.setOptions({ breaks: true, gfm: true, strikethrough: false });
 } else {
@@ -138,9 +135,7 @@ function init() {
         date: document.getElementById('dateField'),
         source: document.getElementById('sourceField'),
         count: document.getElementById('charCount'),
-        status: document.getElementById('saveStatus'),
-        scoreModalOverlay: document.getElementById('scoreModalOverlay'),
-        scoreModalContent: document.getElementById('scoreModalContent')
+        status: document.getElementById('saveStatus')
     };
 
     StyleManager.init(); // Initialize the dynamic stylesheet
@@ -164,13 +159,6 @@ function init() {
     document.getElementById('btnClear').addEventListener('click', clearText);
     document.getElementById('btnPrint').addEventListener('click', () => window.print());
     document.getElementById('btnPaste').addEventListener('click', pasteFromClipboard);
-
-    // --- Event listener for Score Modal ---
-    elements.scoreModalOverlay.addEventListener('click', (e) => {
-        if (e.target === elements.scoreModalOverlay) {
-            elements.scoreModalOverlay.classList.remove('visible');
-        }
-    });
     
     elements.input.addEventListener('input', () => {
         if (elements.input.value.length > CONFIG.MAX_INPUT_SIZE) {
@@ -394,12 +382,8 @@ function handlePaste(e) {
 }
 
 function convertHtmlToPreserveBreaks(htmlString) {
-    // FIX: Proactively strip style attributes from the raw HTML string
-    // before parsing to prevent CSP violations.
-    const cleanedHtml = htmlString.replace(/ style="[^"]*"/g, '');
-
     const parser = new DOMParser();
-    const doc = parser.parseFromString(cleanedHtml, 'text/html');
+    const doc = parser.parseFromString(htmlString, 'text/html');
     const tempDiv = doc.body; // Use the body of the parsed document
 
     // Add newlines before block elements to ensure they are on a new line
@@ -505,16 +489,6 @@ parseSegments(text) {
     let segments = this.parseByLabels(text);
 
     const hasKnownLabels = segments.some(s => s.type === 'user' || s.type === 'ai');
-
-    // If label-based parsing is inconclusive, use the classifier as the primary strategy.
-    if (segments.length < 2 || !hasKnownLabels) {
-        const classifierSegments = this.parseWithClassifier(text);
-        if (classifierSegments.length > 1) {
-            return classifierSegments.filter(seg => seg.content.trim());
-        }
-    }
-    
-    // Fallback to simpler methods if the classifier fails or labels were not present.
     if (segments.length < 2 || !hasKnownLabels) {
         const alternateSegments = this.parseByAlternatingTurns(text);
         if (alternateSegments.length > 1) {
@@ -631,29 +605,6 @@ parseByHeuristicSplit(text) {
         speaker: i % 2 === 0 ? 'User' : 'Assistant',
         content: block.trim()
     })).filter(seg => seg.content);
-},
-
-parseWithClassifier(text) {
-    // This strategy uses the advanced SpeakerClassifier for zero-shot detection
-    const turns = text.trim().split(/\n\s*\n+/);
-    if (turns.length === 0) return [];
-
-    const results = speakerClassifier.classifyConversation(turns);
-    
-    return results.map((result, index) => {
-        let speakerName = 'User';
-        if (result.speaker === 'ai') {
-            speakerName = 'Assistant';
-        } else if (result.speaker === 'uncertain') {
-            speakerName = 'Unknown';
-        }
-
-        return {
-            type: result.speaker, // 'user', 'ai', or 'uncertain'
-            speaker: speakerName,
-            content: turns[index]
-        };
-    });
 }
 }; 
 
@@ -705,29 +656,17 @@ renderChat(text, segments = null) {
             newRow.className = `chat-row ${alignClass}`;
             newRow.dataset.speaker = seg.speaker; 
             newRow.dataset.content = seg.content; 
-
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-bubble';
-            
-            bubble.innerHTML = `
-                <div class="speaker-label">${seg.speaker}</div>
-                <div class="markdown-body" contenteditable="true">${safeHtml}</div>
+            newRow.innerHTML = `
+                <div class="chat-bubble">
+                    <div class="speaker-label">${seg.speaker}</div>
+                    <div class="markdown-body" contenteditable="true">${safeHtml}</div>
+                </div>
             `;
-            
-            // Add the analyze button
-            const analyzeBtnTemplate = document.getElementById('analyze-icon-template');
-            if(analyzeBtnTemplate) {
-                const analyzeBtnFragment = analyzeBtnTemplate.content.cloneNode(true);
-                const analyzeBtn = analyzeBtnFragment.firstElementChild;
-                analyzeBtn.addEventListener('click', () => showScoreAnalysis(seg.content));
-                bubble.appendChild(analyzeBtn);
-            }
-
-            newRow.appendChild(bubble);
             
             const isDarkMode = document.body.classList.contains('dark-mode');
             if (isDarkMode && seg.type !== 'unknown') {
                 const speakerClass = getClassForSpeaker(seg.speaker);
+                const bubble = newRow.querySelector('.chat-bubble');
                 bubble.classList.add(speakerClass);
             }
             if (row) {
@@ -940,27 +879,33 @@ function showToast(msg) {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function showScoreAnalysis(text) {
-    const result = speakerClassifier.classifyTurn(text);
-    const heatScore = speakerClassifier.generateHeatScore(result);
-
-    elements.scoreModalContent.innerHTML = ''; // Clear previous content
-
-    heatScore.forEach(item => {
-        const scoreDiv = document.createElement('div');
-        scoreDiv.className = 'score-item';
-        
-        const weightClass = item.type === 'summary' ? 'summary' : (item.weight > 0 ? 'positive' : 'negative');
-
-        scoreDiv.innerHTML = `
-            <span class="feature-desc">${item.description}</span>
-            <span class="feature-weight ${weightClass}">${item.weight > 0 ? '+' : ''}${item.weight}</span>
-        `;
-        elements.scoreModalContent.appendChild(scoreDiv);
-    });
-
-    elements.scoreModalOverlay.classList.add('visible');
-}
-
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', init);
+
+/**
+ * Fetches the latest commit information from GitHub to display an update status.
+ */
+async function fetchUpdateStatus() {
+    const statusEl = document.getElementById('update-status');
+    if (!statusEl) return;
+
+    try {
+        // Assumes the standard github.io repo naming convention
+        const repo = 'Shawny-P/Shawny-P.github.io'; 
+        const url = `https://api.github.com/repos/${repo}/commits?per_page=1`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`GitHub API request failed: ${response.status}`);
+        }
+        const commits = await response.json();
+        const lastCommit = commits[0];
+        
+        const sha = lastCommit.sha.substring(0, 7);
+        const commitDate = new Date(lastCommit.commit.author.date).toLocaleDateString();
+        statusEl.innerHTML = `Last updated on ${commitDate} (<a href="${lastCommit.html_url}" target="_blank" rel="noopener noreferrer">${sha}</a>)`;
+    } catch (error) {
+        console.error('Failed to fetch update status:', error);
+        statusEl.textContent = 'Could not retrieve update status.';
+    }
+}
