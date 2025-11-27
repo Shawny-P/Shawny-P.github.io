@@ -32,6 +32,7 @@
             --bg-color: #1f2937;
             --header-bg: #111827;
             --border-color: #374151;
+            --text-color: #f9fafb;
             --text-muted: #9ca3af;
 
             /* Invert bubble colors */
@@ -42,8 +43,21 @@
         }
 
         body.dark-mode .preview-pane { background-color: #111827; }
+        body.dark-mode .preview-pane { background-color: var(--bg-color); }
         body.dark-mode #document-sheet { background-color: #1f2937; box-shadow: none; }
         body.dark-mode .doc-header { border-bottom-color: var(--border-color); }
+        body.dark-mode .pane-header { background: #111827; border-bottom-color: var(--border-color); color: var(--text-muted); }
+        body.dark-mode .editor-pane { background: #1f2937; }
+        body.dark-mode textarea { background: #1f2937; color: var(--text-color); }
+        body.dark-mode textarea:focus { background: #111827; }
+        body.dark-mode .editable:hover { background: #374151; }
+        body.dark-mode .editable:focus { background: #4b5563; }
+        body.dark-mode .editable { color: var(--text-color); }
+        body.dark-mode .chat-row.ai .chat-bubble { border-color: var(--border-color); }
+        body.dark-mode .chat-row.user .chat-bubble .markdown-body,
+        body.dark-mode .chat-row.ai .chat-bubble .markdown-body {
+            color: var(--bubble-ai-text); /* Use the same white for both */
+        }
         
         /* --- Ocean Breeze Theme --- */
         body.theme-ocean-breeze {
@@ -341,28 +355,32 @@
             margin-bottom: 30px;
         }
 
-        input.editable {
+        .editable {
             border: none;
             outline: none;
             width: 100%;
             background: transparent;
             transition: background 0.2s;
             border-radius: 4px;
-            padding: 4px;
+            padding: 4px 6px;
         }
-        input.editable:hover { background: #f3f4f6; }
-        input.editable:focus { background: #eff6ff; }
+        .editable:hover { background: #f3f4f6; }
+        .editable:focus { background: #eff6ff; }
 
         .doc-title {
             font-size: 24px;
             font-weight: 800;
             color: #111827;
             margin-bottom: 10px;
+            line-height: 1.3;
+            max-height: 105px; /* Approx 3 lines */
+            overflow-y: auto;
         }
 
         body.dark-mode .doc-title,
         body.dark-mode .meta-row {
             color: #d1d5db;
+            color: var(--text-color);
         }
 
         .meta-row {
@@ -442,6 +460,12 @@
         }
         .chat-bubble .markdown-body p { margin-bottom: 0.5em; }
         .chat-bubble .markdown-body p:last-child { margin-bottom: 0; }
+        
+        /* Style for editable bubbles */
+        .markdown-body[contenteditable="true"]:hover {
+            outline: 1px dashed var(--primary-color);
+            cursor: text;
+        }
 
         /* Fallback for non-chat text */
         .standard-doc {
@@ -535,6 +559,10 @@
                     <li>Edit the Title, Date, and Source fields in the preview.</li>
                     <li>Use the "Export PDF" button to save your chat.</li>
                 </ol>
+                <div style="font-size: 0.8rem; color: #777; margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                    <strong style="color: var(--primary-color);">Privacy Note:</strong> All data is stored locally in your browser.
+                    It is never sent to a server. Use the "Clear" button to erase all data.
+                </div>
             </div>
         </div>
         <textarea 
@@ -548,7 +576,7 @@
     <div class="preview-pane">
         <div id="document-sheet">
             <div class="doc-header">
-                <input type="text" class="editable doc-title" id="docTitle" value="Enter Title Here" autocomplete="off">
+                <div contenteditable="true" class="editable doc-title" id="docTitle">Enter Title Here</div>
                 <div class="meta-row">
                     <span>Date: <input type="text" class="editable" id="dateField" style="width:150px" value="Enter Date Here" autocomplete="off"></span>
                     <span>Source: <input type="text" class="editable" id="sourceField" value="Enter Source Here" style="width:150px" autocomplete="off"></span>
@@ -566,7 +594,7 @@
 
 <script>
     // --- Configuration ---
-    marked.setOptions({ breaks: true, gfm: true });
+    marked.setOptions({ breaks: true, gfm: true, strikethrough: false });
 
     // --- State & DOM ---
     const elements = {
@@ -649,6 +677,11 @@
         // Handle rich text pasting by converting it to clean plain text
         elements.input.addEventListener('paste', handlePaste);
 
+        // Prevent rich text pasting into editable divs
+        document.querySelectorAll('div[contenteditable="true"]').forEach(div => {
+            div.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+        });
+
         // Tab support in textarea
         elements.input.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
@@ -657,7 +690,24 @@
             }
         });
 
-        loadAutoSave();
+        // Use event delegation to handle edits within the preview pane
+        elements.output.addEventListener('blur', (e) => {
+            // When a user clicks away from an edited bubble, update the source text
+            if (e.target && e.target.matches('.markdown-body[contenteditable="true"]')) {
+                updateSourceFromPreview();
+            }
+        }, true); // Use capture phase to ensure the event is caught reliably.
+
+        // Add confirmation before leaving the page if there's unsaved text
+        window.addEventListener('beforeunload', (e) => {
+            if (elements.input.value.trim().length > 0) {
+                // Standard way to trigger the browser's confirmation dialog
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // loadAutoSave(); // Disabled for privacy on shared computers. User must explicitly click "Load".
     }
 
     function setTheme(theme) {
@@ -696,11 +746,15 @@
       const nav = performance.getEntriesByType('navigation')[0];
       const wasReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
       if (wasReload) {
-        elements.title.value = 'Enter Title Here';
-        elements.source.value = 'Enter Source Here';
-        const today = new Date();
-        elements.date.value = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        resetFields();
       }
+    }
+
+    function resetFields() {
+      elements.title.textContent = 'Enter Title Here';
+      elements.source.value = 'Enter Source Here';
+      const today = new Date();
+      elements.date.value = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
     async function pasteFromClipboard() {
@@ -805,7 +859,7 @@
         const segments = parseSegments(text);
 
         // 1. Detect LLM source only if it's the default or empty
-        if (elements.source.value === 'Enter Source Here' || elements.source.value === 'AI Assistant' || elements.source.value === '') {
+        if (elements.source.value === 'Enter Source Here' || elements.source.value === 'AI Assistant' || !elements.source.value) {
             const aiSegments = segments.filter(s => s.type === 'ai');
             let detectedSource = null;
             if (aiSegments.length > 0) {
@@ -826,7 +880,7 @@
         }
 
         // 2. Detect Topic only if it's the default or empty
-        if (elements.title.value === 'Enter Title Here' || elements.title.value === 'Conversation Log' || elements.title.value === '') {
+        if (elements.title.textContent === 'Enter Title Here' || elements.title.textContent === 'Conversation Log' || !elements.title.textContent) {
             let potentialTitle = "Conversation Log";
             const lines = text.trim().split('\n');
 
@@ -851,7 +905,7 @@
                     if (potentialTitle.trim() === '...' || potentialTitle.trim() === '') potentialTitle = "Conversation Log";
                 }
             }
-            elements.title.value = potentialTitle;
+            elements.title.textContent = potentialTitle;
         }
     }
 
@@ -910,13 +964,33 @@
                 <div class="chat-row ${alignClass}">
                     <div class="chat-bubble" ${style}>
                         ${seg.type !== 'unknown' ? labelHtml : ''}
-                        <div class="markdown-body">${safeHtml}</div>
+                        <div class="markdown-body" contenteditable="true">${safeHtml}</div>
                     </div>
                 </div>
             `;
         });
         html += '</div>';
         elements.output.innerHTML = html;
+    }
+
+    function updateSourceFromPreview() {
+        const segments = parseSegments(elements.input.value);
+        const bubbles = elements.output.querySelectorAll('.markdown-body[contenteditable="true"]');
+
+        if (segments.length !== bubbles.length) {
+            // This can happen if the DOM is out of sync. A re-render is the safest option.
+            handleInput();
+            return;
+        }
+
+        let updatedText = '';
+        segments.forEach((segment, index) => {
+            const bubbleNode = bubbles[index];
+            // Reconstruct the original text block with the potentially edited content
+            const newContent = bubbleNode.innerText; // Use innerText to convert HTML back to plain text
+            updatedText += segment.originalPrefix + newContent + '\n\n';
+        });
+        elements.input.value = updatedText.trim();
     }
 
     function parseByAlternatingTurns(text) {
@@ -963,6 +1037,7 @@
         lines.forEach(line => {
             const match = line.match(speakerRegex);
             
+            let originalPrefix = '';
             if (match) {
                 // Save previous segment if it has content
                 if (currentSegment.content.trim()) {
@@ -971,6 +1046,7 @@
 
                 // Start new segment
                 const detectedName = match[3].toLowerCase();
+                originalPrefix = match[0];
                 const isUser = userKeywords.includes(detectedName);
                 
                 // Clean the line (remove the "User:" part so it doesn't repeat inside the bubble)
@@ -982,7 +1058,8 @@
                 currentSegment = {
                     type: isUser ? 'user' : 'ai',
                     speaker: match[3].charAt(0).toUpperCase() + match[3].slice(1), // Capitalize
-                    content: cleanLine + '\n'
+                    content: cleanLine + '\n',
+                    originalPrefix: originalPrefix
                 };
             } else {
                 // Continue current segment
@@ -993,6 +1070,11 @@
         // Push final segment
         if (currentSegment.content.trim()) {
             segments.push(currentSegment);
+        }
+        
+        // Ensure the very first segment has a prefix if it's just content
+        if (segments.length > 0 && !segments[0].originalPrefix) {
+            segments[0].originalPrefix = '';
         }
 
         // --- Infer first speaker if unknown ---
@@ -1014,7 +1096,7 @@
     function saveDraft() {
         const data = {
             input: elements.input.value,
-            title: elements.title.value,
+            title: elements.title.textContent,
             date: elements.date.value,
             source: elements.source.value
         };
@@ -1023,12 +1105,17 @@
     }
 
     function loadDraft() {
-        const data = JSON.parse(localStorage.getItem('chatExporter_save'));
-        if (data) {
-            elements.input.value = data.input || '';
-            elements.title.value = data.title || 'Conversation Log';
-            elements.date.value = data.date || elements.date.value;
-            elements.source.value = data.source || 'AI Assistant';
+        const autoSaveData = JSON.parse(localStorage.getItem('chatExporter_auto'));
+        const manualSaveData = JSON.parse(localStorage.getItem('chatExporter_save'));
+
+        // Prioritize loading the most recent data, which is likely the auto-save.
+        const dataToLoad = (autoSaveData && autoSaveData.timestamp > (manualSaveData ? manualSaveData.timestamp || 0 : 0)) ? autoSaveData : manualSaveData;
+
+        if (dataToLoad) {
+            elements.input.value = dataToLoad.input || '';
+            elements.title.textContent = dataToLoad.title || 'Conversation Log';
+            elements.date.value = dataToLoad.date || elements.date.value;
+            elements.source.value = dataToLoad.source || 'AI Assistant';
             handleInput();
             showToast("Draft loaded");
         } else {
@@ -1040,8 +1127,9 @@
         if (window.saveTimer) clearTimeout(window.saveTimer);
         window.saveTimer = setTimeout(() => {
             const data = {
+                // Note: The manual save function does not include a timestamp.
                 input: elements.input.value,
-                title: elements.title.value,
+                title: elements.title.textContent,
                 date: elements.date.value,
                 source: elements.source.value,
                 timestamp: Date.now()
@@ -1052,21 +1140,9 @@
         }, 2000);
     }
 
-    function loadAutoSave() {
-        const auto = JSON.parse(localStorage.getItem('chatExporter_auto'));
-        // Load auto-save if it's less than 24 hours old
-        if (auto && (Date.now() - auto.timestamp < 86400000)) {
-            elements.input.value = auto.input;
-            elements.title.value = auto.title;
-            elements.source.value = auto.source;
-            if (auto.date) elements.date.value = auto.date;
-            handleInput();
-        }
-    }
-
     function clearText() {
         elements.input.value = '';
-        elements.title.value = 'Enter Title Here';
+        resetFields();
         handleInput();
     }
 
