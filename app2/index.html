@@ -45,6 +45,57 @@
         body.dark-mode #document-sheet { background-color: #1f2937; box-shadow: none; }
         body.dark-mode .doc-header { border-bottom-color: var(--border-color); }
 
+        /* --- Sunset Theme --- */
+        body.theme-sunset {
+            --bg-color: #fef3c7; /* Pale Yellow */
+            --header-bg: #9a3412; /* Dark Orange */
+            --border-color: #fdba74;
+            --primary-color: #ea580c;
+            --primary-hover: #c2410c;
+            --text-muted: #92400e;
+
+            --bubble-user-bg: #f97316; /* Orange */
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #fffbeb;   /* Light Yellow */
+            --bubble-ai-text: #451a03; /* Dark Brown */
+        }
+        body.theme-sunset .preview-pane { background-color: #fefce8; }
+        body.theme-sunset #document-sheet { background-color: #fffbeb; }
+
+        /* --- Ocean Theme --- */
+        body.theme-ocean {
+            --bg-color: #e0f2fe; /* Lightest Blue */
+            --header-bg: #075985; /* Dark Blue */
+            --border-color: #7dd3fc;
+            --primary-color: #0ea5e9;
+            --primary-hover: #0284c7;
+            --text-muted: #0369a1;
+
+            --bubble-user-bg: #0369a1; /* Mid Blue */
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #f0f9ff;   /* Almost White Blue */
+            --bubble-ai-text: #082f49; /* Darkest Blue */
+        }
+        body.theme-ocean .preview-pane { background-color: #f0f9ff; }
+        body.theme-ocean #document-sheet { background-color: #f0f9ff; }
+
+        /* --- Forest Theme --- */
+        body.theme-forest {
+            --bg-color: #f0fdf4; /* Lightest Green */
+            --header-bg: #14532d; /* Dark Green */
+            --border-color: #86efac;
+            --primary-color: #22c55e;
+            --primary-hover: #16a34a;
+            --text-muted: #15803d;
+
+            --bubble-user-bg: #166534; /* Mid Green */
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #dcfce7;   /* Pale Green */
+            --bubble-ai-text: #064e3b; /* Dark Teal */
+        }
+        body.theme-forest .preview-pane { background-color: #f7fee7; }
+        body.theme-forest #document-sheet { background-color: #f0fdf4; }
+
         * { box-sizing: border-box; }
 
         body {
@@ -360,8 +411,9 @@
     <div class="status" id="saveStatus"></div>
     <div class="controls">
         <button class="btn" onclick="loadDraft()">Load</button>
-        <button class="btn" onclick="setTheme('default')">Default</button>
+        <button class="btn" onclick="setTheme('light')">Light</button>
         <button class="btn" onclick="setTheme('dark')">Dark Mode</button>
+        <button class="btn" onclick="cycleTheme()">Cycle Theme</button>
         <button class="btn btn-success" onclick="saveDraft()">Save</button>
         <button class="btn" onclick="clearText()">Clear</button>
         <button class="btn btn-print" onclick="window.print()">Export PDF</button>
@@ -428,6 +480,10 @@
         status: document.getElementById('saveStatus')
     };
 
+    // --- Theme Management ---
+    const themes = ['light', 'dark', 'sunset', 'ocean', 'forest'];
+    let currentThemeIndex = 0;
+
     // --- Color Logic for Dark Mode ---
     const speakerColorCache = {};
     const lightColors = [
@@ -465,7 +521,7 @@
     const aiKeywords = ['ai', 'chatgpt', 'claude', 'gemini', 'grok', 'llama', 'copilot', 'assistant', 'model', 'bot'];
 
     function init() {
-        setTheme(localStorage.getItem('chatTheme') || 'default'); // Apply saved theme
+        setTheme(localStorage.getItem('chatTheme') || 'light'); // Apply saved theme
         resetMetaOnReload();
         
         // Set date if still empty after potential reload reset
@@ -493,13 +549,23 @@
     }
 
     function setTheme(theme) {
-        if (theme === 'dark') {
-            document.body.classList.add('dark-mode');
-            localStorage.setItem('chatTheme', 'dark');
-        } else {
-            document.body.classList.remove('dark-mode');
-            localStorage.setItem('chatTheme', 'default');
+        // Remove all possible theme classes
+        document.body.classList.remove('dark-mode', 'theme-sunset', 'theme-ocean', 'theme-forest');
+
+        if (theme !== 'light') {
+            const className = theme === 'dark' ? 'dark-mode' : `theme-${theme}`;
+            document.body.classList.add(className);
         }
+        
+        localStorage.setItem('chatTheme', theme);
+        const themeIndex = themes.indexOf(theme);
+        currentThemeIndex = themeIndex !== -1 ? themeIndex : 0;
+    }
+
+    function cycleTheme() {
+        currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+        const nextTheme = themes[currentThemeIndex];
+        setTheme(nextTheme);
     }
 
     function resetMetaOnReload() {
