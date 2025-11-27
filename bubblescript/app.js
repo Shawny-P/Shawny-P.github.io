@@ -382,12 +382,13 @@ function handlePaste(e) {
 }
 
 function convertHtmlToPreserveBreaks(htmlString) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-    const tempDiv = doc.body; // Use the body of the parsed document
+    // FIX: Proactively strip style attributes from the raw HTML string
+    // before parsing to prevent CSP violations.
+    const cleanedHtml = htmlString.replace(/ style="[^"]*"/g, '');
 
-    // FIX: Proactively remove all inline styles to prevent CSP violations.
-    tempDiv.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(cleanedHtml, 'text/html');
+    const tempDiv = doc.body; // Use the body of the parsed document
 
     // Add newlines before block elements to ensure they are on a new line
     tempDiv.querySelectorAll('p, div, li, h1, h2, h3, blockquote').forEach(el => {
