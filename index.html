@@ -5,23 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Projects</title>
     <style>
-        body { font-family: sans-serif; }
+        body {
+            font-family: sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
         .app-card {
             border: 1px solid #ccc;
             padding: 1rem;
-            margin: 1rem;
+            margin: 1rem auto;
             border-radius: 0.5rem;
+            max-width: 300px;
+            text-align: center;
+            background-color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            
+            /* This prevents long text from breaking out of the box */
+            word-wrap: break-word; 
+            overflow-wrap: break-word;
         }
         .app-card a {
             text-decoration: none;
-            color: #333;
+            color: #0288D1;
+            font-weight: bold;
+            font-size: 1.1rem;
+            
+            /* This makes the whole text block easier to click */
+            display: block; 
+        }
+        .app-card a:hover {
+            color: #01579B;
         }
     </style>
 </head>
 <body>
-    <h1>My Projects</h1>
-    <div class="app-card"><a href="Copilot_CopyPaste_Export_SMS_Style_Conversation/">Copilot Bubble App</a></div>
-    <div class="app-card"><a href="app2/">App 2</a></div>
-    <div class="app-card"><a href="app3/">App 3</a></div>
+   
+<h1>My Projects</h1>
+
+<div class="app-card">
+    <a href="Copilot_CopyPaste_Export_SMS_Style_Conversation/">Copilot Bubble App</a>
+</div>
+
+<div class="app-card">
+    <a href="bubblescript/">BubbleScript App</a>
+</div>
+
+<div class="app-card">
+    <a href="app3/">App 3</a>
+</div>
+
 </body>
 </html>
