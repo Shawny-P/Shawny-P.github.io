@@ -44,57 +44,156 @@
         body.dark-mode .preview-pane { background-color: #111827; }
         body.dark-mode #document-sheet { background-color: #1f2937; box-shadow: none; }
         body.dark-mode .doc-header { border-bottom-color: var(--border-color); }
-
-        /* --- Sunset Theme --- */
-        body.theme-sunset {
-            --bg-color: #fef3c7; /* Pale Yellow */
-            --header-bg: #9a3412; /* Dark Orange */
-            --border-color: #fdba74;
-            --primary-color: #ea580c;
-            --primary-hover: #c2410c;
-            --text-muted: #92400e;
-
-            --bubble-user-bg: #f97316; /* Orange */
+        
+        /* --- Ocean Breeze Theme --- */
+        body.theme-ocean-breeze {
+            --bg-color: #E0F7FA;
+            --header-bg: #004D40;
+            --border-color: #B2EBF2;
+            --primary-color: #00796B;
+            --primary-hover: #004D40;
+            --text-muted: #263238;
+            --bubble-user-bg: #00796B;
             --bubble-user-text: #ffffff;
-            --bubble-ai-bg: #fffbeb;   /* Light Yellow */
-            --bubble-ai-text: #451a03; /* Dark Brown */
+            --bubble-ai-bg: #E0F7FA;
+            --bubble-ai-text: #263238;
         }
-        body.theme-sunset .preview-pane { background-color: #fefce8; }
-        body.theme-sunset #document-sheet { background-color: #fffbeb; }
+        body.theme-ocean-breeze .preview-pane, body.theme-ocean-breeze #document-sheet { background-color: #F0FEFF; }
 
-        /* --- Ocean Theme --- */
-        body.theme-ocean {
-            --bg-color: #e0f2fe; /* Lightest Blue */
-            --header-bg: #075985; /* Dark Blue */
-            --border-color: #7dd3fc;
-            --primary-color: #0ea5e9;
-            --primary-hover: #0284c7;
-            --text-muted: #0369a1;
-
-            --bubble-user-bg: #0369a1; /* Mid Blue */
+        /* --- Sunset Glow Theme --- */
+        body.theme-sunset-glow {
+            --bg-color: #FFF3E0;
+            --header-bg: #D84315;
+            --border-color: #FFCC80;
+            --primary-color: #FB8C00;
+            --primary-hover: #D84315;
+            --text-muted: #4E342E;
+            --bubble-user-bg: #FB8C00;
             --bubble-user-text: #ffffff;
-            --bubble-ai-bg: #f0f9ff;   /* Almost White Blue */
-            --bubble-ai-text: #082f49; /* Darkest Blue */
+            --bubble-ai-bg: #FFF3E0;
+            --bubble-ai-text: #4E342E;
         }
-        body.theme-ocean .preview-pane { background-color: #f0f9ff; }
-        body.theme-ocean #document-sheet { background-color: #f0f9ff; }
+        body.theme-sunset-glow .preview-pane, body.theme-sunset-glow #document-sheet { background-color: #FFF9F2; }
 
-        /* --- Forest Theme --- */
-        body.theme-forest {
-            --bg-color: #f0fdf4; /* Lightest Green */
-            --header-bg: #14532d; /* Dark Green */
-            --border-color: #86efac;
-            --primary-color: #22c55e;
-            --primary-hover: #16a34a;
-            --text-muted: #15803d;
-
-            --bubble-user-bg: #166534; /* Mid Green */
+        /* --- Tropical Vibes Theme --- */
+        body.theme-tropical-vibes {
+            --bg-color: #F1F8E9;
+            --header-bg: #FFEB3B;
+            --border-color: #C5E1A5;
+            --primary-color: #43A047;
+            --primary-hover: #1B5E20;
+            --text-muted: #1B5E20;
+            --bubble-user-bg: #43A047;
             --bubble-user-text: #ffffff;
-            --bubble-ai-bg: #dcfce7;   /* Pale Green */
-            --bubble-ai-text: #064e3b; /* Dark Teal */
+            --bubble-ai-bg: #F1F8E9;
+            --bubble-ai-text: #1B5E20;
         }
-        body.theme-forest .preview-pane { background-color: #f7fee7; }
-        body.theme-forest #document-sheet { background-color: #f0fdf4; }
+        body.theme-tropical-vibes .preview-pane, body.theme-tropical-vibes #document-sheet { background-color: #F8FCF4; }
+
+        /* --- Coral Reef Theme --- */
+        body.theme-coral-reef {
+            --bg-color: #FCE4EC;
+            --header-bg: #F06292;
+            --border-color: #F8BBD0;
+            --primary-color: #E91E63;
+            --primary-hover: #880E4F;
+            --text-muted: #880E4F;
+            --bubble-user-bg: #E91E63;
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #FCE4EC;
+            --bubble-ai-text: #880E4F;
+        }
+        body.theme-coral-reef .preview-pane, body.theme-coral-reef #document-sheet { background-color: #FDF6F8; }
+
+        /* --- Sky & Sand Theme --- */
+        body.theme-sky-sand {
+            --bg-color: #FFF8E1;
+            --header-bg: #03A9F4;
+            --border-color: #81D4FA;
+            --primary-color: #0288D1;
+            --primary-hover: #01579B;
+            --text-muted: #37474F;
+            --bubble-user-bg: #0288D1;
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #FFF8E1;
+            --bubble-ai-text: #37474F;
+        }
+        body.theme-sky-sand .preview-pane, body.theme-sky-sand #document-sheet { background-color: #FFFBF2; }
+
+        /* --- Citrus Pop Theme --- */
+        body.theme-citrus-pop {
+            --bg-color: #FFFDE7;
+            --header-bg: #FF5722;
+            --border-color: #FFD54F;
+            --primary-color: #FBC02D;
+            --primary-hover: #FFA000;
+            --text-muted: #3E2723;
+            --bubble-user-bg: #FBC02D;
+            --bubble-user-text: #3E2723;
+            --bubble-ai-bg: #FFFDE7;
+            --bubble-ai-text: #3E2723;
+        }
+        body.theme-citrus-pop .preview-pane, body.theme-citrus-pop #document-sheet { background-color: #FFFEEF; }
+
+        /* --- Lavender Fields Theme --- */
+        body.theme-lavender-fields {
+            --bg-color: #F3E5F5;
+            --header-bg: #CE93D8;
+            --border-color: #E1BEE7;
+            --primary-color: #9C27B0;
+            --primary-hover: #4A148C;
+            --text-muted: #4A148C;
+            --bubble-user-bg: #9C27B0;
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #F3E5F5;
+            --bubble-ai-text: #4A148C;
+        }
+        body.theme-lavender-fields .preview-pane, body.theme-lavender-fields #document-sheet { background-color: #F9F4FA; }
+
+        /* --- Aqua Coral Theme --- */
+        body.theme-aqua-coral {
+            --bg-color: #E0F2F1;
+            --header-bg: #FF7043;
+            --border-color: #A7FFEB;
+            --primary-color: #009688;
+            --primary-hover: #004D40;
+            --text-muted: #004D40;
+            --bubble-user-bg: #009688;
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #E0F2F1;
+            --bubble-ai-text: #004D40;
+        }
+        body.theme-aqua-coral .preview-pane, body.theme-aqua-coral #document-sheet { background-color: #F0FAF9; }
+
+        /* --- Berry Burst Theme --- */
+        body.theme-berry-burst {
+            --bg-color: #F8BBD0;
+            --header-bg: #F06292;
+            --border-color: #F48FB1;
+            --primary-color: #AD1457;
+            --primary-hover: #880E4F;
+            --text-muted: #4A148C;
+            --bubble-user-bg: #AD1457;
+            --bubble-user-text: #ffffff;
+            --bubble-ai-bg: #F8BBD0;
+            --bubble-ai-text: #4A148C;
+        }
+        body.theme-berry-burst .preview-pane, body.theme-berry-burst #document-sheet { background-color: #FCE4EC; }
+
+        /* --- Fresh Lime Theme --- */
+        body.theme-fresh-lime {
+            --bg-color: #F1F8E9;
+            --header-bg: #CDDC39;
+            --border-color: #DCE775;
+            --primary-color: #8BC34A;
+            --primary-hover: #558B2F;
+            --text-muted: #33691E;
+            --bubble-user-bg: #8BC34A;
+            --bubble-user-text: #33691E;
+            --bubble-ai-bg: #F1F8E9;
+            --bubble-ai-text: #33691E;
+        }
+        body.theme-fresh-lime .preview-pane, body.theme-fresh-lime #document-sheet { background-color: #F8FCF4; }
 
         * { box-sizing: border-box; }
 
@@ -481,7 +580,20 @@
     };
 
     // --- Theme Management ---
-    const themes = ['light', 'dark', 'sunset', 'ocean', 'forest'];
+    const themes = [
+        'light', 
+        'dark', 
+        'ocean-breeze', 
+        'sunset-glow', 
+        'tropical-vibes', 
+        'coral-reef', 
+        'sky-sand', 
+        'citrus-pop', 
+        'lavender-fields', 
+        'aqua-coral', 
+        'berry-burst', 
+        'fresh-lime'
+    ];
     let currentThemeIndex = 0;
 
     // --- Color Logic for Dark Mode ---
@@ -550,7 +662,19 @@
 
     function setTheme(theme) {
         // Remove all possible theme classes
-        document.body.classList.remove('dark-mode', 'theme-sunset', 'theme-ocean', 'theme-forest');
+        document.body.classList.remove(
+            'dark-mode', 
+            'theme-ocean-breeze', 
+            'theme-sunset-glow', 
+            'theme-tropical-vibes', 
+            'theme-coral-reef', 
+            'theme-sky-sand', 
+            'theme-citrus-pop', 
+            'theme-lavender-fields', 
+            'theme-aqua-coral', 
+            'theme-berry-burst', 
+            'theme-fresh-lime'
+        );
 
         if (theme !== 'light') {
             const className = theme === 'dark' ? 'dark-mode' : `theme-${theme}`;
