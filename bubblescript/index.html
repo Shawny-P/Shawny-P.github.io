@@ -42,7 +42,6 @@
             --bubble-ai-text: #f9fafb;
         }
 
-        body.dark-mode .preview-pane { background-color: #111827; }
         body.dark-mode .preview-pane { background-color: var(--bg-color); }
         body.dark-mode #document-sheet { background-color: #1f2937; box-shadow: none; }
         body.dark-mode .doc-header { border-bottom-color: var(--border-color); }
@@ -626,31 +625,19 @@
 
     // --- Color Logic for Dark Mode ---
     const speakerColorCache = {};
-    const lightColors = [
-        '#FFFFFF', // Pure White
-        '#F5F5F5', // White Smoke
-        '#E8E8E8', // Platinum
-        '#FAFAFA', // Snow
-        '#F0F8FF', // Alice Blue
-        '#F5FFFA', // Mint Cream
-        '#FFFACD', // Lemon Chiffon
-        '#FFF0F5', // Lavender Blush
-        '#F8F8FF', // Ghost White
-        '#F0FFF0'  // Honeydew
-    ];
 
     function getColorForSpeaker(speaker) {
         if (speakerColorCache[speaker]) {
             return speakerColorCache[speaker];
         }
-        // Simple hash function to get a consistent color
+        // Deterministic hash function to get a consistent hue from the speaker's name.
         let hash = 0;
         for (let i = 0; i < speaker.length; i++) {
             hash = speaker.charCodeAt(i) + ((hash << 5) - hash);
         }
-        // Ensure the hash is positive
-        const index = Math.abs(hash) % lightColors.length;
-        const color = lightColors[index];
+        const hue = Math.abs(hash) % 360;
+        // Use a fixed saturation and lightness suitable for dark backgrounds.
+        const color = `hsl(${hue}, 90%, 75%)`;
         speakerColorCache[speaker] = color;
         return color;
     }
@@ -743,8 +730,7 @@
     }
 
     function resetMetaOnReload() {
-      const nav = performance.getEntriesByType('navigation')[0];
-      const wasReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
+      const wasReload = performance.getEntriesByType('navigation')[0]?.type === 'reload';
       if (wasReload) {
         resetFields();
       }
@@ -789,18 +775,10 @@
 
             } catch (err) {
                 console.error('Failed to read clipboard using modern API: ', err);
-                tryFallbackPaste();
+                showToast('Could not read clipboard. Please use Ctrl+V / Cmd+V to paste.');
             }
         } else {
-            tryFallbackPaste();
-        }
-    }
-
-    function tryFallbackPaste() {
-        elements.input.focus();
-        const success = document.execCommand('paste');
-        if (!success) {
-            showToast('Paste from button not supported in this browser. Please use Ctrl+V.');
+            showToast('Clipboard API not supported. Please use Ctrl+V / Cmd+V to paste.');
         }
     }
 
@@ -973,12 +951,42 @@
         elements.output.innerHTML = html;
     }
 
+    function convertBubbleHtmlToText(bubbleNode) {
+        // Create a temporary container to safely manipulate the HTML content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = bubbleNode.innerHTML;
+
+        // Handle <pre><code> blocks to preserve code formatting
+        tempDiv.querySelectorAll('pre').forEach(pre => {
+            const code = pre.querySelector('code');
+            const lang = code ? (Array.from(code.classList).find(c => c.startsWith('language-')) || '').replace('language-', '') : '';
+            const codeText = pre.textContent;
+            // Replace the <pre> element with a markdown code fence text node
+            pre.replaceWith(document.createTextNode(`\n\`\`\`${lang}\n${codeText}\n\`\`\`\n`));
+        });
+
+        // Convert <br> tags to newlines for manual line breaks
+        tempDiv.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+
+        // For other block elements, ensure they are separated by newlines
+        tempDiv.querySelectorAll('p, ul, ol, blockquote, h1, h2, h3').forEach(block => {
+            // Insert a newline before the block if it's not the first element
+            if (block.previousSibling) {
+                block.before(document.createTextNode('\n'));
+            }
+        });
+
+        // Use textContent to get the final plain text with preserved structures
+        return tempDiv.textContent.trim();
+    }
+
     function updateSourceFromPreview() {
         const segments = parseSegments(elements.input.value);
         const bubbles = elements.output.querySelectorAll('.markdown-body[contenteditable="true"]');
 
         if (segments.length !== bubbles.length) {
             // This can happen if the DOM is out of sync. A re-render is the safest option.
+            showToast("Preview out of sync. Re-rendering from source.");
             handleInput();
             return;
         }
@@ -986,11 +994,13 @@
         let updatedText = '';
         segments.forEach((segment, index) => {
             const bubbleNode = bubbles[index];
-            // Reconstruct the original text block with the potentially edited content
-            const newContent = bubbleNode.innerText; // Use innerText to convert HTML back to plain text
-            updatedText += segment.originalPrefix + newContent + '\n\n';
+            // Convert the edited HTML back to markdown-like text, preserving code blocks.
+            const newContent = convertBubbleHtmlToText(bubbleNode);
+            updatedText += (segment.originalPrefix || '') + newContent + '\n\n';
         });
         elements.input.value = updatedText.trim();
+        scheduleAutoSave(); // Trigger an auto-save after the edit is committed
+        scheduleAutoSave();
     }
 
     function parseByAlternatingTurns(text) {
@@ -1030,34 +1040,51 @@
         const lines = text.split('\n');
         const segments = [];
         let currentSegment = { type: 'unknown', speaker: 'Unknown', content: '' };
-        
-        // Regex to catch lines like: "**User:**", "You said:", "ChatGPT:", "## Claude"
-        const speakerRegex = new RegExp(`^(\\*\\*|##\\s|)(\\s*)(${[...userKeywords, ...aiKeywords].join('|')})(:|\\s+said|\\s+wrote|\\*\\*)?`, 'i');
+
+        // --- Hardened Speaker Detection ---
+        // 1. Permissive Regex: Catches any name followed by a colon, e.g., "Shawn:", "Patrick (User):"
+        const permissiveSpeakerRegex = /^(.+?):\s+/;
+        // 2. Keyword Regex (Fallback): Catches keywords like "User", "AI", "ChatGPT" even without a colon.
+        const keywordSpeakerRegex = new RegExp(`^(\\*\\*|##\\s|)?(\\s*)(${[...userKeywords, ...aiKeywords].join('|')})(\\*\\*|:|\\s+said)?`, 'i');
 
         lines.forEach(line => {
-            const match = line.match(speakerRegex);
-            
+            let match = line.match(permissiveSpeakerRegex);
+            let speakerName, isUser, isAi;
+
             let originalPrefix = '';
-            if (match) {
+            if (match && match[1]) { // Strategy 1: Matched "Name:"
+                speakerName = match[1].trim();
+                const lowerSpeaker = speakerName.toLowerCase();
+                isUser = userKeywords.some(k => lowerSpeaker.includes(k));
+                isAi = aiKeywords.some(k => lowerSpeaker.includes(k));
+                originalPrefix = match[0];
+
+            } else { // Strategy 2: Fallback to keyword matching
+                match = line.match(keywordSpeakerRegex);
+                if (match && match[3]) {
+                    speakerName = match[3];
+                    const lowerSpeaker = speakerName.toLowerCase();
+                    isUser = userKeywords.includes(lowerSpeaker);
+                    isAi = true; // If not user, assume AI by keyword list
+                    originalPrefix = match[0];
+                }
+            }
+
+            if (speakerName) {
                 // Save previous segment if it has content
                 if (currentSegment.content.trim()) {
                     segments.push(currentSegment);
                 }
 
-                // Start new segment
-                const detectedName = match[3].toLowerCase();
-                originalPrefix = match[0];
-                const isUser = userKeywords.includes(detectedName);
-                
-                // Clean the line (remove the "User:" part so it doesn't repeat inside the bubble)
-                // We keep the rest of the line in case there is text on the same line
+                // Determine speaker type. Default to AI if not explicitly a user keyword.
+                const speakerType = isUser ? 'user' : 'ai';
+
+                // Clean the line (remove the speaker part so it doesn't repeat inside the bubble)
                 let cleanLine = line.replace(match[0], '').trim();
-                // Remove trailing colon if regex missed it
-                if (cleanLine.startsWith(':')) cleanLine = cleanLine.substring(1).trim();
 
                 currentSegment = {
-                    type: isUser ? 'user' : 'ai',
-                    speaker: match[3].charAt(0).toUpperCase() + match[3].slice(1), // Capitalize
+                    type: speakerType,
+                    speaker: speakerName.charAt(0).toUpperCase() + speakerName.slice(1), // Capitalize
                     content: cleanLine + '\n',
                     originalPrefix: originalPrefix
                 };
@@ -1098,7 +1125,8 @@
             input: elements.input.value,
             title: elements.title.textContent,
             date: elements.date.value,
-            source: elements.source.value
+            source: elements.source.value,
+            timestamp: Date.now()
         };
         localStorage.setItem('chatExporter_save', JSON.stringify(data));
         showToast("Draft saved successfully");
