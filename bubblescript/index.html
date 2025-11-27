@@ -1065,10 +1065,9 @@
     }
 
     function clearText() {
-        if(confirm("Clear everything?")) {
-            elements.input.value = '';
-            handleInput();
-        }
+        elements.input.value = '';
+        elements.title.value = 'Enter Title Here';
+        handleInput();
     }
 
     function showToast(msg) {
