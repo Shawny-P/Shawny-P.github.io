@@ -116,18 +116,6 @@ const userKeywordRegex = new RegExp(`\\b(${CONFIG.USER_KEYWORDS.map(escapeRegex)
 const aiKeywordRegex = new RegExp(`\\b(${CONFIG.AI_KEYWORDS.map(escapeRegex).join('|')})\\b`, 'i');
 
 function init() {
-    // --- CRITICAL: Check for dependencies before proceeding ---
-    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
-        document.body.innerHTML = `<div class="critical-error-container">
-        <h1>Critical Error: Core library failed to load.</h1>
-        <p>The application cannot start because a required library (Marked.js for parsing or DOMPurify for security) did not load. This may be due to a network issue, a content delivery network (CDN) outage, or a browser extension blocking the request.</p>
-        <p><strong>Please check your internet connection and reload the page. Do not paste any data.</strong></p>
-    </div>`;
-        // Halt all further execution
-        return;
-    }
-
-    // FIX: Select elements here to ensure DOM is ready
     elements = {
         input: document.getElementById('inputBox'),
         output: document.getElementById('outputContent'),
@@ -137,6 +125,20 @@ function init() {
         count: document.getElementById('charCount'),
         status: document.getElementById('saveStatus')
     };
+
+    // --- CRITICAL: Check for dependencies and elements before proceeding ---
+    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined' || !elements.input) {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'critical-error-container';
+        errorContainer.innerHTML = `
+            <h1>Critical Error: Application failed to initialize.</h1>
+            <p>A required library (like Marked.js or DOMPurify) did not load, or a core HTML element is missing. This can be caused by network issues, ad blockers, or unexpected changes to the HTML structure.</p>
+            <p><strong>Please check your internet connection, disable any extensions that might block scripts, and reload the page.</strong></p>`;
+        
+        document.body.innerHTML = ''; // Clear the body
+        document.body.appendChild(errorContainer);
+        return; // Halt all further execution
+    }
 
     StyleManager.init(); // Initialize the dynamic stylesheet
     const savedTheme = localStorage.getItem('chatTheme');
@@ -880,7 +882,13 @@ function showToast(msg) {
 }
 
 // === INITIALIZATION ===
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    // This ensures that the entire DOM is ready before we try to access any elements.
+    // It prevents the "Cannot read properties of null" errors.
+    init();
+});
+
+
 
 /**
  * Fetches the latest commit information from GitHub to display an update status.
