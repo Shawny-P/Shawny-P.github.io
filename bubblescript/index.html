@@ -7,8 +7,8 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self'; 
         script-src 'self' https://cdnjs.cloudflare.com; 
-        style-src 'self' https://cdnjs.cloudflare.com;
-        img-src 'self' data: https:;
+        style-src 'self' https://cdnjs.cloudflare.com; 
+        img-src 'self' data: https: https://visitor-badge.glitch.me; /* Allow visitor badge */
         font-src 'self' https://cdnjs.cloudflare.com;
         connect-src 'self' https://api.github.com; /* Allow fetching update status */
         frame-src 'none';
@@ -33,7 +33,10 @@
         </svg>
         <span>AI Chat Exporter</span>
     </div>
-    <div class="status" id="saveStatus"></div>
+    <div class="header-center">
+        <div class="status" id="saveStatus"></div>
+        <img src="https://visitor-badge.glitch.me/badge?page_id=Shawny-P.github.io.bubblescript" alt="Visitor Count">
+    </div>
     <div class="controls" role="navigation" aria-label="Main controls">
         <button type="button" class="btn" id="btnLoad" aria-label="Load saved draft">Load</button>
         <button type="button" class="btn" id="btnThemeLight" aria-label="Switch to light theme">Light</button>
