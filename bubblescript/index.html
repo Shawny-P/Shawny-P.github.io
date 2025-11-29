@@ -43,6 +43,7 @@
         <button type="button" class="btn" id="btnClear" aria-label="Clear all content">Clear</button>
         <button type="button" class="btn btn-print" id="btnPrint" aria-label="Print or export to PDF">Export PDF</button>
         <button type="button" class="btn btn-danger" id="btnDeleteSelected" aria-label="Delete selected bubbles" style="display: none;">Delete Selected</button>
+        <button type="button" class="btn" id="btnEmbed" aria-label="Get embeddable widget code">Embed Widget</button>
     </div>
 </header>
 
@@ -100,6 +101,19 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- Embed Code Modal -->
+<div id="embedModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Embed on Your Site</h2>
+            <button id="closeEmbedModal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <p>Copy and paste this snippet into your website's HTML where you want the widget to appear.</p>
+        <pre id="embedCode" class="code-snippet" tabindex="0"></pre>
+        <button id="copyEmbedCode" class="btn">Copy Code</button>
+    </div>
+</div>
 
 <footer id="app-footer">
     <span id="update-status"></span>

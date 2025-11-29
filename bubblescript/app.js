@@ -163,6 +163,7 @@ function init() {
     document.getElementById('btnPrint').addEventListener('click', () => window.print());
     document.getElementById('btnPaste').addEventListener('click', pasteFromClipboard);
     document.getElementById('btnDeleteSelected').addEventListener('click', deleteSelectedBubbles);
+    document.getElementById('btnEmbed').addEventListener('click', openEmbedModal);
     
     elements.input.addEventListener('input', () => {
         if (elements.input.value.length > CONFIG.MAX_INPUT_SIZE) {
@@ -740,6 +741,44 @@ function deleteSelectedBubbles() {
 
     elements.input.value = newText.trim();
     handleInput(false); // Re-render the chat immediately
+}
+
+/**
+ * Initializes the functionality for the embed code modal.
+ */
+function initEmbedModal() {
+    const modal = document.getElementById('embedModal');
+    const closeBtn = document.getElementById('closeEmbedModal');
+    const copyBtn = document.getElementById('copyEmbedCode');
+    const codeEl = document.getElementById('embedCode');
+
+    // Generate the embed code based on the current location
+    const widgetUrl = new URL('widget.js', window.location.href).href;
+    const embedCode = `<script src="${widgetUrl}" defer><\/script>`;
+    codeEl.textContent = embedCode;
+
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCode).then(() => {
+            showToast('Embed code copied to clipboard!');
+        }, () => {
+            showToast('Failed to copy code.');
+        });
+    });
+
+    // Close modal if user clicks outside of it
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+function openEmbedModal() {
+    document.getElementById('embedModal').style.display = 'flex';
 }
 
 function convertBubbleHtmlToText(bubbleNode) {
