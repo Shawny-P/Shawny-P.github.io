@@ -754,8 +754,20 @@ function initEmbedModal() {
     const copyBtn = document.getElementById('copyEmbedCode');
     const codeEl = document.getElementById('embedCode');
 
-    // Generate the embed code based on the current location
-    const widgetUrl = new URL('widget.js', window.location.href).href;
+    // --- Generate a production-ready embed URL ---
+    // This logic ensures the URL is correct whether running locally or on a live server.
+    let widgetUrl;
+    const isLocal = window.location.protocol === 'file:';
+    
+    if (isLocal) {
+        // When running locally, construct the expected GitHub Pages URL.
+        // Assumes the repo structure is 'Shawny-P.github.io/bubblescript/'.
+        widgetUrl = 'https://shawny-p.github.io/bubblescript/widget.js';
+    } else {
+        // When on a live server, create the URL relative to the current page.
+        widgetUrl = new URL('widget.js', window.location.href).href;
+    }
+
     const embedCode = `<script src="${widgetUrl}" defer><\/script>`;
     codeEl.textContent = embedCode;
 
