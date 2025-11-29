@@ -72,9 +72,9 @@ const themes = [
     'lavender-fields', 
     'aqua-coral', 
     'berry-burst', 
-    'fresh-lime'
+    'fresh-lime',
+    'fat-albert' 
 ];
-themes.push('fat-albert'); // Add the new theme
 
 // SECURE: Whitelist of valid themes
 const VALID_THEMES = [...themes];
@@ -256,7 +256,9 @@ function init() {
             e.preventDefault();
             e.returnValue = '';
         }
-    }); // loadAutoSave(); // Disabled for privacy on shared computers. User must explicitly click "Load".
+    }); 
+    
+    initEmbedModal(); // Initialize the embed modal listeners
 }
 
 function setTheme(theme) {
@@ -894,18 +896,19 @@ load() {
             throw new Error('Field data too large');
         }
         
+        // SECURE: Sanitize all loaded data before using it to prevent stored XSS.
         const cleanTitle = DOMPurify.sanitize(dataToLoad.title, {
             ALLOWED_TAGS: [],
             ALLOWED_ATTR: []
-        });
+        }).trim();
         const cleanSource = DOMPurify.sanitize(dataToLoad.source, {
             ALLOWED_TAGS: [],
             ALLOWED_ATTR: []
-        });
+        }).trim();
         const cleanDate = DOMPurify.sanitize(dataToLoad.date, {
             ALLOWED_TAGS: [],
             ALLOWED_ATTR: []
-        });
+        }).trim();
         
         elements.input.value = dataToLoad.input;
         elements.title.textContent = cleanTitle || 'Conversation Log';

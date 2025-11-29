@@ -683,10 +683,10 @@ body.dark-mode .meta-row {
 /* --- Print Mode --- */
 @media print {
     @page { margin: 10mm; size: A4; }
-    body { background: white; display: block; height: auto; }
-    header, .editor-pane, .toast { display: none !important; }
-    .preview-pane { width: 100%; padding: 0; background: white; display: block; overflow: visible; }
-    #document-sheet { width: 100%; max-width: none; box-shadow: none; padding: 0; margin: 0; min-height: auto; }
+    body, main, .workspace, .preview-pane { overflow: visible !important; height: auto !important; display: block !important; }
+    header, .editor-pane, .toast, #app-footer, .delete-checkbox { display: none !important; }
+    .preview-pane { width: 100%; padding: 0; background: white; }
+    #document-sheet { width: 100%; max-width: none; box-shadow: none; padding: 0; margin: 0; min-height: auto; border: none; }
     
     /* Print tweaks for bubbles */
     .chat-bubble { 
